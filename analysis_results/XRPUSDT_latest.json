@@ -1,6 +1,6 @@
 {
   "symbol": "XRPUSDT",
-  "timestamp_utc": "2026-06-15T15:02:40.896020+00:00",
+  "timestamp_utc": "2026-06-15T16:45:18.163767+00:00",
   "current_price": 1.1852,
   "session": "NY",
   "scenario_number": 6,
@@ -25,7 +25,7 @@
     "min_confluences": 7,
     "session_leverage_cap": 5,
     "position_size_cap_pct": 100,
-    "reasoning": "Part 0A BEAR rule driven by price below 20D VWMA and Part 1 NY session rule applying full table with high reliability for trending scenarios."
+    "reasoning": "Part 0A BEAR rule driven by price below 20D VWMA and Part 1 NY session rule for highest-probability window for all trending scenarios."
   },
   "analysis": {
     "indicator_scores": [
@@ -37,7 +37,7 @@
       },
       {
         "indicator": "Long/Short Ratio",
-        "reading": "buy_ratio 77.37% \u2014 extreme_long=True \u2014 contrarian signal",
+        "reading": "buy_ratio 77.37% \u2014 extreme_long=True \u2014 contrarian signal=BEARISH",
         "signal": "BEARISH",
         "score": 0
       },
@@ -55,13 +55,13 @@
       },
       {
         "indicator": "Bid/Ask Delta",
-        "reading": "ratio 0.0000 [neutral] (>0 = more bids = buying pressure)",
+        "reading": "ratio 0.0000 \u2014 neutral",
         "signal": "NEUTRAL",
         "score": 1
       },
       {
         "indicator": "Funding Rate",
-        "reading": "0.000000 per 8h [unknown] \u2014 extreme+/- T/F",
+        "reading": "0.000000 per 8h \u2014 extreme+: False | extreme-: False",
         "signal": "NEUTRAL",
         "score": 1
       },
@@ -91,7 +91,7 @@
       },
       {
         "indicator": "RSI",
-        "reading": "RSI 78.9179060379918 \u2014 overbought >70",
+        "reading": "RSI 78.9179060379918 \u2014 overbought",
         "signal": "BEARISH",
         "score": 0
       },
@@ -105,39 +105,40 @@
     "mantle_signal_score": {
       "reading": "CVD Matrix State: BOTH_FLAT",
       "signal": "NEUTRAL",
-      "score": 1
+      "score": 0
     },
     "confluence_count": 6,
     "meets_minimum": false,
-    "bull_case": "No bull case due to insufficient confluence and bearish indicators.",
-    "bear_case": "Bear agent argues for no trade due to insufficient confluence (6 < 7 required), bearish indicators such as VWMA 20D, Long/Short Ratio, and RSI, and a bear regime.",
+    "bull_case": "No strong bull case due to lack of confluence and bearish indicators such as RSI overbought and extreme long ratio.",
+    "bear_case": "Bear case is supported by the bear regime, price below 20D VWMA, and overbought RSI.",
     "verdict": "NO_TRADE",
     "confidence_score": 30,
     "entry_trigger": "None",
-    "stop_price": 0,
+    "stop_price": 0.0,
     "stop_reasoning": "Not applicable",
-    "target_1": 0,
-    "target_2": 0,
+    "target_1": 0.0,
+    "target_2": 0.0,
     "leverage_recommended": 1,
-    "position_size_coins": 0,
-    "pre_trade_note_why": "Insufficient confluence and bearish indicators.",
-    "pre_trade_note_wrong": "Price breaks above 20D VWMA or confluence increases to 7+.",
+    "position_size_coins": 0.0,
+    "pre_trade_note_why": "No trade due to insufficient confluence and bearish market context.",
+    "pre_trade_note_wrong": "Price breaks below last higher low or RSI falls below 70.",
     "pre_trade_note_add": "None",
-    "failure_mode": "When price breaks below last lower low or confluence decreases further.",
+    "failure_mode": "When price breaks below last higher low or RSI falls below 70, indicating a failed bottom formation.",
     "session_adjustment": "NY session, but no trade due to insufficient confluence.",
-    "regime_adjustment": "Bear regime, which aligns with the no trade verdict.",
+    "regime_adjustment": "Bear regime, supporting the no trade decision.",
     "playbook_rules_cited": [
+      "Part 0A BEAR rule driven by price below 20D VWMA",
       "Part 3: BOTH_FLAT CVD matrix state \u2014 no directional conviction",
-      "Part 8: Risk management \u2014 insufficient confluence"
+      "Part 8: Risk management \u2014 insufficient confluence for a trade"
     ]
   },
   "mantle_signals": null,
   "global_market": {
     "available": true,
     "btc_dominance": 56.41,
-    "eth_dominance": 9.25,
-    "stablecoin_dom": 7.88,
-    "mcap_change_24h": 4.57,
+    "eth_dominance": 9.32,
+    "stablecoin_dom": 7.81,
+    "mcap_change_24h": 5.39,
     "risk_sentiment": "RISK_ON",
     "altcoin_season": false,
     "btc_dom_signal": "REDUCE_ALTCOIN_CONFIDENCE",
@@ -167,11 +168,11 @@
     "risk_sentiment": "RISK_ON"
   },
   "enforcement_applied": false,
-  "snapshot_hash": "ff80ebb58c84d09c70e3e8daf9a8fcd3294c2550bccc89c68af39925da875107",
-  "data_hash": "87c970b483ef9f4e5412c1f986cebc90c926d2debdd357358c1ef72a31dcffba",
-  "hash_payload_json": "{\"analysis_timestamp_utc_minute\":\"2026-06-15T15:02:00Z\",\"base_direction\":\"NEUTRAL\",\"confidence_calibrated\":false,\"confidence_score\":30,\"confluence_count\":6,\"cvd_matrix_state\":\"BOTH_FLAT\",\"entry_trigger\":\"None\",\"failure_mode\":\"When price breaks below last lower low or confluence decreases further.\",\"leverage_recommended\":1,\"macro_regime\":\"BEAR\",\"playbook_prompt_hash\":\"be5580949d7d1941\",\"playbook_rules_cited\":[\"Part 3: BOTH_FLAT CVD matrix state \\u2014 no directional conviction\",\"Part 8: Risk management \\u2014 insufficient confluence\"],\"pre_trade_note_add\":\"None\",\"pre_trade_note_why\":\"Insufficient confluence and bearish indicators.\",\"pre_trade_note_wrong\":\"Price breaks above 20D VWMA or confluence increases to 7+.\",\"scenario\":\"S6_BOTTOM_FORMING\",\"snapshot_hash\":\"ff80ebb58c84d09c70e3e8daf9a8fcd3294c2550bccc89c68af39925da875107\",\"stop_price\":0,\"symbol\":\"XRPUSDT\",\"target_1\":0,\"verdict\":\"NO_TRADE\",\"verdict_overridden\":false}",
-  "audit_tx_hash": "0078246dc8fcdb9529f141bef85d5be0071234e2e73a670079450fe48763e7cd",
-  "audit_explorer_url": "https://explorer.sepolia.mantle.xyz/tx/0078246dc8fcdb9529f141bef85d5be0071234e2e73a670079450fe48763e7cd",
-  "audit_block": 39995565,
+  "snapshot_hash": "01b3c1a7daeda3f34983a6b1ff3ff8794570aba7505f93ae158695c2bb659487",
+  "data_hash": "c4ce81a3c0a5a7995a5e32dd10dae7a5044a7cd4937b8ed82159e8ece9f5056f",
+  "hash_payload_json": "{\"analysis_timestamp_utc_minute\":\"2026-06-15T16:45:00Z\",\"base_direction\":\"NEUTRAL\",\"confidence_calibrated\":false,\"confidence_score\":30,\"confluence_count\":6,\"cvd_matrix_state\":\"BOTH_FLAT\",\"entry_trigger\":\"None\",\"failure_mode\":\"When price breaks below last higher low or RSI falls below 70, indicating a failed bottom formation.\",\"leverage_recommended\":1,\"macro_regime\":\"BEAR\",\"playbook_prompt_hash\":\"be5580949d7d1941\",\"playbook_rules_cited\":[\"Part 0A BEAR rule driven by price below 20D VWMA\",\"Part 3: BOTH_FLAT CVD matrix state \\u2014 no directional conviction\",\"Part 8: Risk management \\u2014 insufficient confluence for a trade\"],\"pre_trade_note_add\":\"None\",\"pre_trade_note_why\":\"No trade due to insufficient confluence and bearish market context.\",\"pre_trade_note_wrong\":\"Price breaks below last higher low or RSI falls below 70.\",\"scenario\":\"S6_BOTTOM_FORMING\",\"snapshot_hash\":\"01b3c1a7daeda3f34983a6b1ff3ff8794570aba7505f93ae158695c2bb659487\",\"stop_price\":0.0,\"symbol\":\"XRPUSDT\",\"target_1\":0.0,\"verdict\":\"NO_TRADE\",\"verdict_overridden\":false}",
+  "audit_tx_hash": "de4b0c33d359e9a565bb7fc4409f48ac46610ee7ed0e109034022af4832c46fa",
+  "audit_explorer_url": "https://explorer.sepolia.mantle.xyz/tx/de4b0c33d359e9a565bb7fc4409f48ac46610ee7ed0e109034022af4832c46fa",
+  "audit_block": 39998637,
   "contract_address": "0xe94812EA9dBb21C71BeB50A4c17DC3962023dE00"
 }

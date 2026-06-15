@@ -30,6 +30,7 @@ raw_ws_logs/
 
 # ── Temporary dev artifacts ───────────────────────────────────────────────────
 docx_extract_tmp/
+archieve/
 playbook_extracted.txt
 error_data_injection.txt
 scenario_correlation_report.json

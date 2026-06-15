@@ -1,6 +1,6 @@
 {
   "symbol": "ETHUSDT",
-  "timestamp_utc": "2026-06-15T15:03:33.458869+00:00",
+  "timestamp_utc": "2026-06-15T16:46:06.001556+00:00",
   "current_price": 1724.77,
   "session": "NY",
   "scenario_number": 6,
@@ -25,7 +25,7 @@
     "min_confluences": 7,
     "session_leverage_cap": 5,
     "position_size_cap_pct": 100,
-    "reasoning": "Part 0A BEAR rule driven by price below 20D VWMA and Part 1 NY session rule applying full table with high reliability for trending scenarios."
+    "reasoning": "Part 0A BEAR rule driven by price below 20D VWMA and Part 1 NY session rule for highest-probability window for all trending scenarios."
   },
   "analysis": {
     "indicator_scores": [
@@ -49,7 +49,7 @@
       },
       {
         "indicator": "Spot CVD",
-        "reading": "direction flat [source: binance_spot], slope 0.00000",
+        "reading": "direction flat, slope 0.00000 [source: binance_spot]",
         "signal": "NEUTRAL",
         "score": 1
       },
@@ -91,7 +91,7 @@
       },
       {
         "indicator": "RSI",
-        "reading": "RSI 81.44647376719058 \u2014 overbought >70",
+        "reading": "RSI 81.44647376719058 \u2014 overbought",
         "signal": "BEARISH",
         "score": 0
       },
@@ -103,33 +103,33 @@
       }
     ],
     "mantle_signal_score": {
-      "reading": "mETH Yield: 4.5% APY, vs ETH funding annualized: 0.0%, mETH Carry Signal: BEARISH",
+      "reading": "mETH Yield: 4.5% APY (source: mantle-staking-baseline-4.5%) vs ETH funding annualized: 0.0%",
       "signal": "CAUTIOUS_BEARISH",
       "score": 0
     },
-    "confluence_count": 4,
+    "confluence_count": 5,
     "meets_minimum": false,
-    "bull_case": "No bull case due to insufficient confluence and bearish indicators.",
-    "bear_case": "Bear agent argues for no trade due to insufficient confluence count (4 < 7), bearish indicators, and a bear regime.",
+    "bull_case": "No bull case due to insufficient confluence count and bearish indicators.",
+    "bear_case": "The bear case is supported by the bearish long/short ratio, overbought RSI, and cautious bearish mantle signal.",
     "verdict": "NO_TRADE",
     "confidence_score": 30,
     "entry_trigger": "None",
-    "stop_price": 0.0,
+    "stop_price": 0,
     "stop_reasoning": "Not applicable",
-    "target_1": 0.0,
-    "target_2": 0.0,
-    "leverage_recommended": 1,
-    "position_size_coins": 0.0,
-    "pre_trade_note_why": "Insufficient confluence and bearish indicators.",
-    "pre_trade_note_wrong": "Confluence count below minimum or bearish indicators.",
+    "target_1": 0,
+    "target_2": 0,
+    "leverage_recommended": 0,
+    "position_size_coins": 0,
+    "pre_trade_note_why": "Insufficient confluence count and bearish indicators.",
+    "pre_trade_note_wrong": "A bullish reversal in the CVD matrix state and improvement in the long/short ratio could invalidate the thesis.",
     "pre_trade_note_add": "None",
-    "failure_mode": "Insufficient confluence or bearish indicators.",
-    "session_adjustment": "NY session, but insufficient confluence.",
-    "regime_adjustment": "Bear regime, insufficient confluence for a trade.",
+    "failure_mode": "A failure in this scenario would be indicated by a strong bullish reversal in the indicators and a significant increase in price.",
+    "session_adjustment": "The NY session and bear regime context support a cautious approach.",
+    "regime_adjustment": "The bear regime context and BTC dominance rule reduce confidence in a potential long setup.",
     "playbook_rules_cited": [
       "Part 0A BEAR rule driven by price below 20D VWMA",
-      "Part 3: BOTH_FLAT CVD matrix state",
-      "Part 8: Risk management and position sizing"
+      "Part 1 NY session rule for highest-probability window for all trending scenarios",
+      "Part 3 CVD matrix state BOTH_FLAT"
     ]
   },
   "mantle_signals": {
@@ -160,14 +160,14 @@
     },
     "combined_direction": "CAUTIOUS_BEARISH",
     "combined_note": "Partial Mantle ecosystem pressure on bulls",
-    "timestamp_utc": "2026-06-15T15:03:33.458869+00:00"
+    "timestamp_utc": "2026-06-15T16:46:06.001556+00:00"
   },
   "global_market": {
     "available": true,
     "btc_dominance": 56.41,
-    "eth_dominance": 9.25,
-    "stablecoin_dom": 7.88,
-    "mcap_change_24h": 4.57,
+    "eth_dominance": 9.32,
+    "stablecoin_dom": 7.81,
+    "mcap_change_24h": 5.39,
     "risk_sentiment": "RISK_ON",
     "altcoin_season": false,
     "btc_dom_signal": "REDUCE_ALTCOIN_CONFIDENCE",
@@ -197,11 +197,11 @@
     "risk_sentiment": "RISK_ON"
   },
   "enforcement_applied": false,
-  "snapshot_hash": "e806e4b046d4b6fb1d5014baf7ea15229c9413c69859d199a33b1e54444e6167",
-  "data_hash": "276513667ab9814dc9151490f9b6dcfcc24d58ba2b9bed9a878230e3bacd0757",
-  "hash_payload_json": "{\"analysis_timestamp_utc_minute\":\"2026-06-15T15:03:00Z\",\"base_direction\":\"NEUTRAL\",\"confidence_calibrated\":false,\"confidence_score\":30,\"confluence_count\":4,\"cvd_matrix_state\":\"BOTH_FLAT\",\"entry_trigger\":\"None\",\"failure_mode\":\"Insufficient confluence or bearish indicators.\",\"leverage_recommended\":1,\"macro_regime\":\"BEAR\",\"playbook_prompt_hash\":\"be5580949d7d1941\",\"playbook_rules_cited\":[\"Part 0A BEAR rule driven by price below 20D VWMA\",\"Part 3: BOTH_FLAT CVD matrix state\",\"Part 8: Risk management and position sizing\"],\"pre_trade_note_add\":\"None\",\"pre_trade_note_why\":\"Insufficient confluence and bearish indicators.\",\"pre_trade_note_wrong\":\"Confluence count below minimum or bearish indicators.\",\"scenario\":\"S6_BOTTOM_FORMING\",\"snapshot_hash\":\"e806e4b046d4b6fb1d5014baf7ea15229c9413c69859d199a33b1e54444e6167\",\"stop_price\":0.0,\"symbol\":\"ETHUSDT\",\"target_1\":0.0,\"verdict\":\"NO_TRADE\",\"verdict_overridden\":false}",
-  "audit_tx_hash": "db147f9985f82e43c5a3514a98288582016aaed03145be78eeb4066e7576d9c1",
-  "audit_explorer_url": "https://explorer.sepolia.mantle.xyz/tx/db147f9985f82e43c5a3514a98288582016aaed03145be78eeb4066e7576d9c1",
-  "audit_block": 39995576,
+  "snapshot_hash": "a950625bd4c9ed6fa7f62de42af9b605a802c189dc48e6bd9c113bf6be38cdc7",
+  "data_hash": "444edade7e91695a95158dbbba11d16d443af3206fee3bb4be0be836042804dd",
+  "hash_payload_json": "{\"analysis_timestamp_utc_minute\":\"2026-06-15T16:46:00Z\",\"base_direction\":\"NEUTRAL\",\"confidence_calibrated\":false,\"confidence_score\":30,\"confluence_count\":5,\"cvd_matrix_state\":\"BOTH_FLAT\",\"entry_trigger\":\"None\",\"failure_mode\":\"A failure in this scenario would be indicated by a strong bullish reversal in the indicators and a significant increase in price.\",\"leverage_recommended\":0,\"macro_regime\":\"BEAR\",\"playbook_prompt_hash\":\"be5580949d7d1941\",\"playbook_rules_cited\":[\"Part 0A BEAR rule driven by price below 20D VWMA\",\"Part 1 NY session rule for highest-probability window for all trending scenarios\",\"Part 3 CVD matrix state BOTH_FLAT\"],\"pre_trade_note_add\":\"None\",\"pre_trade_note_why\":\"Insufficient confluence count and bearish indicators.\",\"pre_trade_note_wrong\":\"A bullish reversal in the CVD matrix state and improvement in the long/short ratio could invalidate the thesis.\",\"scenario\":\"S6_BOTTOM_FORMING\",\"snapshot_hash\":\"a950625bd4c9ed6fa7f62de42af9b605a802c189dc48e6bd9c113bf6be38cdc7\",\"stop_price\":0,\"symbol\":\"ETHUSDT\",\"target_1\":0,\"verdict\":\"NO_TRADE\",\"verdict_overridden\":false}",
+  "audit_tx_hash": "8c5877c151c777b5ce10aab957014f6a349478562a7610becbe6b5cb098b4573",
+  "audit_explorer_url": "https://explorer.sepolia.mantle.xyz/tx/8c5877c151c777b5ce10aab957014f6a349478562a7610becbe6b5cb098b4573",
+  "audit_block": 39998660,
   "contract_address": "0xe94812EA9dBb21C71BeB50A4c17DC3962023dE00"
 }

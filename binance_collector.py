@@ -65,9 +65,10 @@ def _get_dead_letter_log() -> logging.Logger:
 SYMBOLS         = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "MNTUSDT"]
 KAFKA_BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP", "localhost:19092")
 
-# MNTUSDT trades on Bybit but NOT on Binance USDT-M Futures (FAPI).
-# Exclude from FAPI REST polling AND from futures WS (mntusdt@aggTrade on
-# fstream.binance.com returns nothing / reconnect-loops).
+# MNTUSDT does NOT exist on Binance spot or USDT-M futures.
+# Exclude from both WS feeds, REST polling, and backfill to avoid HTTP 400 errors.
+# MNTUSDT spot CVD comes from FusionX DEX via mantle_integrations.py instead.
+SPOT_SYMBOLS    = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT"]
 FAPI_SYMBOLS    = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT"]
 
 TRADE_FILTER_THRESHOLD = 1000   # min notional (price × size) — matches data_collector.py
@@ -749,23 +750,27 @@ class BinanceCollectorManager:
         _start_drain_thread(self.producer, self._stop)
 
         # ── Historical backfill — seeds CVD immediately instead of waiting 4H ─
+        # Use SPOT_SYMBOLS and FAPI_SYMBOLS, not self.symbols, to exclude MNTUSDT
+        # which has no Binance spot or futures pair (avoids HTTP 400 on every backfill).
         BinanceBackfill(self.producer, session, self._stop).run_async(
-            symbols=self.symbols, fapi_symbols=FAPI_SYMBOLS
+            symbols=SPOT_SYMBOLS, fapi_symbols=FAPI_SYMBOLS
         )
 
         # ── WS feeds ──────────────────────────────────────────────────────────
         for sym in self.symbols:
             sym_lower = sym.lower()
 
-            spot = BinanceWsFeed(
-                url=f"{SPOT_WS_BASE}/{sym_lower}@aggTrade",
-                symbol=sym, market_type="spot", producer=self.producer,
-            )
-            spot.start()
-            self._feeds.append(spot)
-            time.sleep(0.2)
+            # Spot WS: exclude MNTUSDT (not on Binance spot)
+            if sym in SPOT_SYMBOLS:
+                spot = BinanceWsFeed(
+                    url=f"{SPOT_WS_BASE}/{sym_lower}@aggTrade",
+                    symbol=sym, market_type="spot", producer=self.producer,
+                )
+                spot.start()
+                self._feeds.append(spot)
+                time.sleep(0.2)
 
-            # Futures aggTrade — FAPI symbols only (MNTUSDT not on Binance USDT-M)
+            # Futures WS: FAPI symbols only (MNTUSDT not on Binance USDT-M)
             if sym in FAPI_SYMBOLS:
                 fut = BinanceWsFeed(
                     url=f"{FUTURES_WS_BASE}/{sym_lower}@aggTrade",

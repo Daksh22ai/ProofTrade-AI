@@ -56,21 +56,19 @@ function SignalRow({ sym, data, selected, onClick }) {
 function Sidebar({ signals, loading, selected, onSelect, onBack }) {
   return (
     <div className="h-full flex flex-col border-r border-border bg-dark/60">
-      {/* Logo */}
-      <div className="px-3 py-3 border-b border-border flex items-center gap-2 flex-shrink-0">
-        <div className="w-6 h-6 rounded bg-mantle/10 border border-mantle/30 flex items-center justify-center text-xs">🧠</div>
-        <div>
-          <div className="text-[10px] font-bold text-text leading-tight">AI Copilot</div>
-          <div className="text-[8px] text-muted">The Turing Test</div>
+      {/* Logo — entire row navigates back to landing page */}
+      <button
+        onClick={onBack}
+        title="Back to landing page"
+        className="px-3 py-3 border-b border-border flex items-center gap-2 flex-shrink-0 w-full text-left hover:bg-white/[0.03] transition-colors group"
+      >
+        <img src="/logo.png" alt="Logo" className="w-6 h-6 rounded object-contain flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] font-bold text-text leading-tight group-hover:text-mantle transition-colors">AI Copilot</div>
+          <div className="text-[8px] text-muted leading-tight">The Turing Test</div>
         </div>
-        <button
-          onClick={onBack}
-          className="ml-auto text-[9px] text-muted hover:text-text transition-all"
-          title="Back to landing"
-        >
-          ← Info
-        </button>
-      </div>
+        <span className="text-[8px] text-muted/40 group-hover:text-muted transition-colors flex-shrink-0">Home</span>
+      </button>
 
       {/* Signal label */}
       <div className="px-3 py-2 border-b border-border/50 flex items-center gap-2 flex-shrink-0">

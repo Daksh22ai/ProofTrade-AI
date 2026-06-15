@@ -89,7 +89,7 @@ function SignalCard({ sym, data, selected, onClick }) {
 
       {/* Price */}
       <div className="font-mono text-base font-bold text-text mb-2">
-        {price ? fmtPrice(price) : '—'}
+        {price ? fmtPrice(price) : '-'}
       </div>
 
       {/* Verdict badge */}

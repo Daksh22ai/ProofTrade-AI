@@ -1,6 +1,6 @@
 {
   "symbol": "SOLUSDT",
-  "timestamp_utc": "2026-06-15T15:02:33.189862+00:00",
+  "timestamp_utc": "2026-06-15T16:45:12.811316+00:00",
   "current_price": 71.23,
   "session": "NY",
   "scenario_number": 2,
@@ -25,13 +25,13 @@
     "min_confluences": 7,
     "session_leverage_cap": 5,
     "position_size_cap_pct": 100,
-    "reasoning": "Part 0A BEAR rule driven by price below 20D VWMA and Part 1 NY session rule applying full table with high reliability for trending scenarios."
+    "reasoning": "Part 0A BEAR rule driven by price below 20D VWMA and Part 1 NY session rule for highest-probability window for all trending scenarios."
   },
   "analysis": {
     "indicator_scores": [
       {
         "indicator": "VWMA 20D",
-        "reading": "price 0.85% above 20D VWMA of $70.62825093688605",
+        "reading": "price 0.85% above 20D VWMA of $70.63",
         "signal": "BULLISH",
         "score": 1
       },
@@ -61,13 +61,13 @@
       },
       {
         "indicator": "Funding Rate",
-        "reading": "0.000000 per 8h [unknown] | extreme+: False | extreme-: False",
+        "reading": "0.000000 per 8h [unknown] \u2014 extreme+/- F/F",
         "signal": "NEUTRAL",
         "score": 0
       },
       {
         "indicator": "Open Interest",
-        "reading": "trend unknown (slope=0.00000)",
+        "reading": "trend unknown, slope 0.00000",
         "signal": "NEUTRAL",
         "score": 0
       },
@@ -79,7 +79,7 @@
       },
       {
         "indicator": "Order Book Depth",
-        "reading": "wall=none | strength=0.000 | top5_bid=0.00 vs top5_ask=0.00 | signal=NEUTRAL",
+        "reading": "wall=none, strength 0.000, top5_bid=0.00 vs top5_ask=0.00",
         "signal": "NEUTRAL",
         "score": 0
       },
@@ -97,47 +97,47 @@
       },
       {
         "indicator": "VPVR",
-        "reading": "POC=$66.0529 | in_HVN=False | in_LVN=True",
+        "reading": "POC=$66.0529, in_HVN=False, in_LVN=True",
         "signal": "BEARISH",
         "score": 0
       }
     ],
     "mantle_signal_score": {
-      "reading": "CVD matrix state BOTH_FLAT",
+      "reading": "CVD matrix state: BOTH_FLAT",
       "signal": "NEUTRAL",
       "score": 0
     },
     "confluence_count": 3,
     "meets_minimum": false,
-    "bull_case": "No strong bull case due to flat CVD, overbought RSI, and BEARISH Long/Short Ratio.",
-    "bear_case": "BEAR regime, price below 20D VWMA, and overbought RSI support a bearish outlook.",
+    "bull_case": "No strong bull case due to flat CVD, overbought RSI, and bearish long/short ratio.",
+    "bear_case": "Bear case supported by extreme long ratio, overbought RSI, and flat CVD.",
     "verdict": "NO_TRADE",
     "confidence_score": 30,
     "entry_trigger": "None",
-    "stop_price": 0,
+    "stop_price": 0.0,
     "stop_reasoning": "Not applicable",
-    "target_1": 0,
-    "target_2": 0,
+    "target_1": 0.0,
+    "target_2": 0.0,
     "leverage_recommended": 1,
-    "position_size_coins": 0,
-    "pre_trade_note_why": "No trade due to insufficient confluence and BEAR regime.",
-    "pre_trade_note_wrong": "Price breaks below last higher low.",
+    "position_size_coins": 0.0,
+    "pre_trade_note_why": "No trade due to insufficient confluence and bearish indicators.",
+    "pre_trade_note_wrong": "A drop below the last higher low would confirm the bearish thesis.",
     "pre_trade_note_add": "None",
-    "failure_mode": "Price breaks below last higher low or RSI falls below 50.",
+    "failure_mode": "A move above the recent high would invalidate the bearish thesis.",
     "session_adjustment": "NY session, but no trade due to insufficient confluence.",
-    "regime_adjustment": "BEAR regime, supporting a bearish outlook.",
+    "regime_adjustment": "BEAR regime, supporting the no-trade decision.",
     "playbook_rules_cited": [
-      "Part 0A BEAR rule driven by price below 20D VWMA",
-      "Part 3: BOTH_FLAT CVD matrix state \u2014 no directional conviction"
+      "Part 3: BOTH_FLAT CVD matrix state \u2014 no directional conviction",
+      "Part 8: Risk management \u2014 insufficient confluence for a trade"
     ]
   },
   "mantle_signals": null,
   "global_market": {
     "available": true,
     "btc_dominance": 56.41,
-    "eth_dominance": 9.25,
-    "stablecoin_dom": 7.88,
-    "mcap_change_24h": 4.57,
+    "eth_dominance": 9.32,
+    "stablecoin_dom": 7.81,
+    "mcap_change_24h": 5.39,
     "risk_sentiment": "RISK_ON",
     "altcoin_season": false,
     "btc_dom_signal": "REDUCE_ALTCOIN_CONFIDENCE",
@@ -167,11 +167,11 @@
     "risk_sentiment": "RISK_ON"
   },
   "enforcement_applied": false,
-  "snapshot_hash": "21179f57a081aa7a4c017a0ab56ffdb6930900259f03d0cb00f760e9f68ede69",
-  "data_hash": "896537a67ad201c8eea83304644ec8e7a931337e3fc0316078fac47d672ca500",
-  "hash_payload_json": "{\"analysis_timestamp_utc_minute\":\"2026-06-15T15:02:00Z\",\"base_direction\":\"NEUTRAL\",\"confidence_calibrated\":false,\"confidence_score\":30,\"confluence_count\":3,\"cvd_matrix_state\":\"BOTH_FLAT\",\"entry_trigger\":\"None\",\"failure_mode\":\"Price breaks below last higher low or RSI falls below 50.\",\"leverage_recommended\":1,\"macro_regime\":\"BEAR\",\"playbook_prompt_hash\":\"be5580949d7d1941\",\"playbook_rules_cited\":[\"Part 0A BEAR rule driven by price below 20D VWMA\",\"Part 3: BOTH_FLAT CVD matrix state \\u2014 no directional conviction\"],\"pre_trade_note_add\":\"None\",\"pre_trade_note_why\":\"No trade due to insufficient confluence and BEAR regime.\",\"pre_trade_note_wrong\":\"Price breaks below last higher low.\",\"scenario\":\"S2_UPTREND_WEAKENING\",\"snapshot_hash\":\"21179f57a081aa7a4c017a0ab56ffdb6930900259f03d0cb00f760e9f68ede69\",\"stop_price\":0,\"symbol\":\"SOLUSDT\",\"target_1\":0,\"verdict\":\"NO_TRADE\",\"verdict_overridden\":false}",
-  "audit_tx_hash": "8610fda2b304ec55531dbde15ee498547e74da9ed23846c5e6f008221bae3862",
-  "audit_explorer_url": "https://explorer.sepolia.mantle.xyz/tx/8610fda2b304ec55531dbde15ee498547e74da9ed23846c5e6f008221bae3862",
-  "audit_block": 39995545,
+  "snapshot_hash": "3ca37661a4279da99e12a23bbd3f05805e27963c72dd90bf687ae723e9c874e3",
+  "data_hash": "700bcf4b126c5db0a1e2b838b9d52b7d6e31735cbba63d33a5788edcba27d1c9",
+  "hash_payload_json": "{\"analysis_timestamp_utc_minute\":\"2026-06-15T16:45:00Z\",\"base_direction\":\"NEUTRAL\",\"confidence_calibrated\":false,\"confidence_score\":30,\"confluence_count\":3,\"cvd_matrix_state\":\"BOTH_FLAT\",\"entry_trigger\":\"None\",\"failure_mode\":\"A move above the recent high would invalidate the bearish thesis.\",\"leverage_recommended\":1,\"macro_regime\":\"BEAR\",\"playbook_prompt_hash\":\"be5580949d7d1941\",\"playbook_rules_cited\":[\"Part 3: BOTH_FLAT CVD matrix state \\u2014 no directional conviction\",\"Part 8: Risk management \\u2014 insufficient confluence for a trade\"],\"pre_trade_note_add\":\"None\",\"pre_trade_note_why\":\"No trade due to insufficient confluence and bearish indicators.\",\"pre_trade_note_wrong\":\"A drop below the last higher low would confirm the bearish thesis.\",\"scenario\":\"S2_UPTREND_WEAKENING\",\"snapshot_hash\":\"3ca37661a4279da99e12a23bbd3f05805e27963c72dd90bf687ae723e9c874e3\",\"stop_price\":0.0,\"symbol\":\"SOLUSDT\",\"target_1\":0.0,\"verdict\":\"NO_TRADE\",\"verdict_overridden\":false}",
+  "audit_tx_hash": "6c83a1ffe28f8c7109fd489564a9f6b26d61c661ae09a847cde17882bd24aadf",
+  "audit_explorer_url": "https://explorer.sepolia.mantle.xyz/tx/6c83a1ffe28f8c7109fd489564a9f6b26d61c661ae09a847cde17882bd24aadf",
+  "audit_block": 39998625,
   "contract_address": "0xe94812EA9dBb21C71BeB50A4c17DC3962023dE00"
 }

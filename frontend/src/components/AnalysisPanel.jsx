@@ -12,7 +12,7 @@ const SIGNAL_COLORS = {
   NEUTRAL: '#6b7280',
 }
 
-// Fixed indicator card: vertical list row, no grid overlap
+// Indicator row: uses a CSS grid with fixed columns so nothing overlaps regardless of panel width
 function IndicatorRow({ ind, rawValues }) {
   const color = SIGNAL_COLORS[ind.signal] || '#6b7280'
   const score = ind.score === 1
@@ -20,11 +20,11 @@ function IndicatorRow({ ind, rawValues }) {
 
   const RAW_MAP = {
     'vwma':          raw.vwma_20d          ? `$${Number(raw.vwma_20d).toLocaleString()}` : null,
-    'long/short':    raw.lsr_buy           ? `L ${(raw.lsr_buy*100).toFixed(1)}% S ${(raw.lsr_sell*100).toFixed(1)}%` : null,
+    'long/short':    raw.lsr_buy           ? `L${(raw.lsr_buy*100).toFixed(0)}%/S${(raw.lsr_sell*100).toFixed(0)}%` : null,
     'rsi':           raw.rsi_14            ? `${Number(raw.rsi_14).toFixed(1)}` : null,
     'macd':          raw.macd_histogram != null ? `${Number(raw.macd_histogram).toFixed(4)}` : null,
     'open interest': raw.oi_trend          ? `${raw.oi_trend}` : null,
-    'funding':       raw.funding_current != null ? `${(raw.funding_current*100).toFixed(4)}% [${raw.funding_bucket||''}]` : null,
+    'funding':       raw.funding_current != null ? `${(raw.funding_current*100).toFixed(4)}%` : null,
     'spot cvd':      raw.spot_cvd_direction ? `${raw.spot_cvd_direction}` : null,
     'futures cvd':   raw.futures_cvd_direction ? `${raw.futures_cvd_direction}` : null,
     'order book':    raw.ob_wall_side      ? `${raw.ob_wall_side}` : null,
@@ -36,39 +36,39 @@ function IndicatorRow({ ind, rawValues }) {
 
   return (
     <div
-      className="flex items-center gap-3 px-3 py-2.5 rounded-lg border"
+      className="rounded-lg border px-2.5 py-2 overflow-hidden"
       style={{ borderColor: color + '25', background: color + '08' }}
     >
-      {/* Score badge */}
-      <div
-        className="w-6 h-6 rounded flex items-center justify-center flex-shrink-0 text-xs font-bold"
-        style={{
-          backgroundColor: score ? '#00D4AA20' : '#6b728020',
-          color: score ? '#00D4AA' : '#6b7280',
-          border: `1px solid ${score ? '#00D4AA40' : '#6b728040'}`,
-        }}
-      >
-        {score ? '1' : '0'}
+      {/* Row 1: score + name + signal */}
+      <div className="flex items-center gap-2 mb-1">
+        <span
+          className="flex-shrink-0 w-5 h-5 rounded text-[9px] font-bold flex items-center justify-center"
+          style={{
+            backgroundColor: score ? '#00D4AA18' : '#6b728018',
+            color: score ? '#00D4AA' : '#6b7280',
+            border: `1px solid ${score ? '#00D4AA35' : '#6b728035'}`,
+          }}
+        >
+          {score ? '1' : '0'}
+        </span>
+        <span className="text-[11px] font-semibold text-text truncate flex-1 min-w-0">
+          {ind.indicator}
+        </span>
+        <span className="text-[9px] font-medium flex-shrink-0" style={{ color }}>
+          {ind.signal}
+        </span>
       </div>
-
-      {/* Indicator name */}
-      <div className="w-32 flex-shrink-0 min-w-0">
-        <div className="text-[11px] font-semibold text-text truncate">{ind.indicator}</div>
-        <div className="text-[9px] font-medium truncate" style={{ color }}>{ind.signal}</div>
-      </div>
-
-      {/* Raw value */}
-      <div className="w-28 flex-shrink-0 min-w-0">
-        {rawVal ? (
-          <div className="text-[9px] font-mono text-mantle/80 truncate">{rawVal}</div>
-        ) : (
-          <div className="text-[9px] text-muted/40">-</div>
-        )}
-      </div>
-
-      {/* Reading */}
-      <div className="flex-1 min-w-0">
-        <div className="text-[10px] text-muted/80 leading-snug line-clamp-2">{ind.reading}</div>
+      {/* Row 2: raw value (if any) */}
+      {rawVal && (
+        <div className="text-[9px] font-mono px-1 py-0.5 mb-1 rounded truncate"
+             style={{ backgroundColor: color + '12', color: color }}>
+          {rawVal}
+        </div>
+      )}
+      {/* Row 3: LLM reading - sanitize em dashes from API data */}
+      <div className="text-[9px] text-muted leading-snug overflow-hidden"
+           style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+        {(ind.reading || '').replace(/—/g, '-').replace(/–/g, '-')}
       </div>
     </div>
   )
@@ -169,6 +169,12 @@ function MantleSignals({ signals }) {
       </div>
     </Section>
   )
+}
+
+// Strip em/en dashes from any LLM-generated string — they appear in API responses
+function c(s) {
+  if (!s) return s
+  return String(s).replace(/—/g, '-').replace(/–/g, '-')
 }
 
 export default function AnalysisPanel({ symbol, compact = false }) {
@@ -346,7 +352,7 @@ export default function AnalysisPanel({ symbol, compact = false }) {
             <div className="flex-1">LLM Reading</div>
           </div>
           {indicators.length > 0 ? (
-            <div className="space-y-1.5">
+            <div className="grid grid-cols-2 gap-1.5">
               {indicators.map((ind, i) => (
                 <IndicatorRow key={i} ind={ind} rawValues={data.snapshot_raw} />
               ))}
@@ -385,7 +391,7 @@ export default function AnalysisPanel({ symbol, compact = false }) {
         {analysis.entry_trigger && (
           <div className="rounded-lg p-2.5 bg-dark border border-border">
             <div className="text-[9px] text-muted mb-1">Entry Trigger</div>
-            <div className="text-[10px] text-text leading-snug">{analysis.entry_trigger}</div>
+            <div className="text-[10px] text-text leading-snug">{c(analysis.entry_trigger)}</div>
           </div>
         )}
       </div>
@@ -397,9 +403,9 @@ export default function AnalysisPanel({ symbol, compact = false }) {
             Locked before entry. The system commits to these conditions before the recommendation is shown.
           </div>
           {[
-            { label: 'Why this works',      value: analysis.pre_trade_note_why,   color: '#00D4AA' },
-            { label: 'What proves me wrong', value: analysis.pre_trade_note_wrong, color: '#FF6B6B' },
-            { label: 'When to add size',    value: analysis.pre_trade_note_add,   color: '#FFD700' },
+            { label: 'Why this works',       value: c(analysis.pre_trade_note_why),   color: '#00D4AA' },
+            { label: 'What proves me wrong', value: c(analysis.pre_trade_note_wrong), color: '#FF6B6B' },
+            { label: 'When to add size',     value: c(analysis.pre_trade_note_add),   color: '#FFD700' },
           ].map((item, i) => (
             <div key={i} className="rounded-lg p-3 bg-dark border border-border">
               <div className="text-[9px] font-bold mb-1.5" style={{ color: item.color }}>{item.label}</div>
@@ -414,11 +420,11 @@ export default function AnalysisPanel({ symbol, compact = false }) {
         <div className="p-4 grid grid-cols-1 gap-3">
           <div className="rounded-lg p-3 bg-mantle/5 border border-mantle/15">
             <div className="text-[9px] font-bold text-mantle mb-2">BULL CASE</div>
-            <div className="text-[10px] text-text/80 leading-relaxed">{analysis.bull_case}</div>
+            <div className="text-[10px] text-text/80 leading-relaxed">{c(analysis.bull_case)}</div>
           </div>
           <div className="rounded-lg p-3 bg-bear/5 border border-bear/15">
             <div className="text-[9px] font-bold text-bear mb-2">BEAR CASE</div>
-            <div className="text-[10px] text-text/80 leading-relaxed">{analysis.bear_case}</div>
+            <div className="text-[10px] text-text/80 leading-relaxed">{c(analysis.bear_case)}</div>
           </div>
         </div>
       </Section>
@@ -432,12 +438,12 @@ export default function AnalysisPanel({ symbol, compact = false }) {
           {(analysis.playbook_rules_cited || []).map((rule, i) => (
             <div key={i} className="flex items-start gap-2 text-[10px] text-muted">
               <span className="text-mantle flex-shrink-0 mt-0.5">+</span>
-              <span>{rule}</span>
+              <span>{c(rule)}</span>
             </div>
           ))}
           {analysis.failure_mode && (
             <div className="mt-3 pt-3 border-t border-border text-[10px] text-muted italic">
-              Failure mode: {analysis.failure_mode}
+              Failure mode: {c(analysis.failure_mode)}
             </div>
           )}
         </div>

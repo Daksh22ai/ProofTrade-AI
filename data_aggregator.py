@@ -655,13 +655,16 @@ def detect_session() -> str:
     h = now_utc.hour
     m = now_utc.minute
 
-    # LONDON checked BEFORE ASIAN — London Open is 07:00 UTC.
-    # Python evaluates left-to-right; ASIAN (1<=h<8) would swallow 07:00 if checked first.
+    # Session boundaries match the trading playbook Part 1 exactly:
+    #   LONDON     07:00-11:00 UTC  (checked first to prevent ASIAN swallowing 07:00)
+    #   NY         13:00-17:00 UTC
+    #   ASIAN      01:00-07:00 UTC
+    #   DEAD_HOURS everything else: 11:00-13:00 (pre-NY gap), 17:00-01:00 (overnight)
     session = (
         "LONDON"     if  7 <= h < 11  else
-        "ASIAN"      if  1 <= h <  7  else   # 01:00-06:59 UTC only
         "NY"         if 13 <= h < 17  else
-        "DEAD_HOURS"
+        "ASIAN"      if  1 <= h <  7  else
+        "DEAD_HOURS"                          # 0:00, 11-12, 17-23 UTC
     )
 
     # Flag the 30-minute funding reset noise window

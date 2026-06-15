@@ -1,14 +1,14 @@
 {
   "network": "mantleSepolia",
   "chain_id": "5003",
-  "address": "0xe94812EA9dBb21C71BeB50A4c17DC3962023dE00",
-  "audit_log_address": "0xe94812EA9dBb21C71BeB50A4c17DC3962023dE00",
-  "strategy_gate_address": "0xF2b34Df28F4a403b2D41d3FA5A2EA2E330791cA5",
+  "address": "0xdc9AF27a1C764871b71B478A2D6D3FA2cB442Cd4",
+  "audit_log_address": "0xdc9AF27a1C764871b71B478A2D6D3FA2cB442Cd4",
+  "strategy_gate_address": "0x1150499F3D0E712a5a96FD4622656877E6700Ce3",
   "deployer": "0x8C99f4a63218FFabce40c219d3f685703a5fC3ca",
-  "tx_hash": "0x3496ccf9e7fd6a222fc9d315ded3118376c57458c373800358d7d86b5ae8058b",
-  "gate_tx_hash": "0x5c7a093b7cca000a9eb26318d7d3450dd1a5a69e2d5bf2f2a7ef900eb2c54363",
-  "explorer_url": "https://explorer.sepolia.mantle.xyz/address/0xe94812EA9dBb21C71BeB50A4c17DC3962023dE00",
-  "gate_explorer_url": "https://explorer.sepolia.mantle.xyz/address/0xF2b34Df28F4a403b2D41d3FA5A2EA2E330791cA5",
-  "deployed_at_utc": "2026-06-15T14:38:40.811Z",
+  "tx_hash": "0x6f0bb66d89057e52827603e19eecc95bedab86ef8f13defdaaefe561a53a90eb",
+  "gate_tx_hash": "0x03980d507d2460b7fc437dcef984ee7eec3fcdbf2d77988bd6f075a78362c5d5",
+  "explorer_url": "https://explorer.sepolia.mantle.xyz/address/0xdc9AF27a1C764871b71B478A2D6D3FA2cB442Cd4",
+  "gate_explorer_url": "https://explorer.sepolia.mantle.xyz/address/0x1150499F3D0E712a5a96FD4622656877E6700Ce3",
+  "deployed_at_utc": "2026-06-15T17:15:38.184Z",
   "version": "Mantle-AI-Copilot-TradingSignalOracle-v2.0"
 }

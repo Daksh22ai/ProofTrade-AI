@@ -299,10 +299,45 @@ def run(symbols: list = None):
 
 
 # ── CLI entry point ────────────────────────────────────────────────────────────
+#
+# Usage:
+#   python run_pipeline.py                   # run once, all symbols
+#   python run_pipeline.py BTCUSDT           # run once, one symbol
+#   python run_pipeline.py --loop            # run every 30 minutes forever
+#   python run_pipeline.py --loop --interval 60  # run every 60 minutes
 
 if __name__ == "__main__":
-    # Allow overriding symbol list from command line: python run_pipeline.py BTCUSDT ETHUSDT
-    symbols = sys.argv[1:] if len(sys.argv) > 1 else None
-    if symbols:
-        logger.info(f"Running for specific symbols: {symbols}")
-    run(symbols)
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Mantle AI Trading Copilot pipeline")
+    parser.add_argument("symbols", nargs="*", help="Symbols to analyse (default: all 6)")
+    parser.add_argument("--loop", action="store_true",
+                        help="Run on a repeating interval instead of once")
+    parser.add_argument("--interval", type=int, default=30,
+                        help="Interval in minutes between runs (default: 30, used with --loop)")
+    args = parser.parse_args()
+
+    target_symbols = args.symbols if args.symbols else None
+
+    if args.loop:
+        interval_s = args.interval * 60
+        logger.info(
+            f"Pipeline scheduler started: every {args.interval} minutes "
+            f"for {target_symbols or 'all symbols'}"
+        )
+        run_count = 0
+        while True:
+            run_count += 1
+            logger.info(f"{'='*60}\nScheduled run #{run_count}")
+            try:
+                run(target_symbols)
+            except Exception as e:
+                logger.error(f"Pipeline run #{run_count} failed: {e}", exc_info=True)
+            from datetime import timedelta as _td
+            next_run = datetime.now(timezone.utc) + _td(seconds=interval_s)
+            logger.info(f"Next run at {next_run.strftime('%H:%M:%S')} UTC (in {args.interval} min)")
+            time.sleep(interval_s)
+    else:
+        if target_symbols:
+            logger.info(f"Running for specific symbols: {target_symbols}")
+        run(target_symbols)

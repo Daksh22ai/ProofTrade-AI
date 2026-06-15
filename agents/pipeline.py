@@ -138,6 +138,18 @@ Near funding reset (30min window): {snapshot.get('near_funding_reset', False)}{g
     logger.info(f"[{snapshot['symbol']}] Calling Groq — MacroRegimeAgent...")
     result = _groq_json_call(MACRO_REGIME_PROMPT, user_content,
                              max_tokens=600, required_keys=_MACRO_REQUIRED)
+
+    # Override session with the deterministically computed value.
+    # The LLM receives it as input but may still output a different value;
+    # the computed value from detect_session() is always authoritative.
+    computed_session = snapshot.get('session')
+    if computed_session and result.get('session') != computed_session:
+        logger.info(
+            f"[{snapshot['symbol']}] Session override: LLM said '{result.get('session')}' "
+            f"but computed value is '{computed_session}'. Using computed."
+        )
+        result['session'] = computed_session
+
     logger.info(f"[{snapshot['symbol']}] Macro: {result.get('macro_regime')} | Session: {result.get('session')}")
     return result
 

@@ -17,9 +17,7 @@ export default function Header({ deployment, lastUpdate, onRefresh, onRunPipelin
       {/* Logo */}
       <div className="flex items-center gap-2 flex-shrink-0">
         <div className="relative">
-          <div className="w-7 h-7 rounded-lg bg-mantle/10 border border-mantle/30 flex items-center justify-center text-sm">
-            🧠
-          </div>
+          <img src="/logo.png" alt="Logo" className="w-7 h-7 rounded-lg object-contain" />
           <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
             <span className="pulse-ring" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-mantle" />

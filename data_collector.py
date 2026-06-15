@@ -3203,7 +3203,7 @@ async def main():
     # Idempotent: safe to call on every startup (CREATE TABLE IF NOT EXISTS).
     create_questdb_tables()
 
-    start_http_server(8000)           # Prometheus metrics endpoint
+    start_http_server(9100)           # Prometheus metrics (moved from 8000, FastAPI uses 8000)
     start_health_server(8001)         # JSON health endpoint
     start_health_snapshot_logger(     # periodic health snapshots → logs/health_snapshots_*.jsonl
         interval_s=30.0,              #   rule of thumb: 30s while DB < 100M rows; raise to 60-120s beyond that

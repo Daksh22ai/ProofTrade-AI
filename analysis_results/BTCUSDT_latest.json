@@ -1,6 +1,6 @@
 {
   "symbol": "BTCUSDT",
-  "timestamp_utc": "2026-06-15T15:02:23.014294+00:00",
+  "timestamp_utc": "2026-06-15T16:45:02.327520+00:00",
   "current_price": 65710.0,
   "session": "NY",
   "scenario_number": 6,
@@ -25,7 +25,7 @@
     "min_confluences": 7,
     "session_leverage_cap": 5,
     "position_size_cap_pct": 100,
-    "reasoning": "Part 0A BEAR rule driven by price below 20D VWMA and Part 1 NY session rule applying full table with high reliability for trending scenarios."
+    "reasoning": "Part 0A BEAR rule driven by price below 20D VWMA and Part 1 NY session rule for highest-probability window for all trending scenarios."
   },
   "analysis": {
     "indicator_scores": [
@@ -61,7 +61,7 @@
       },
       {
         "indicator": "Funding Rate",
-        "reading": "0.000000 per 8h \u2014 extreme+ False \u2014 extreme- False",
+        "reading": "0.000000 per 8h \u2014 extreme+: False \u2014 extreme-: False",
         "signal": "NEUTRAL",
         "score": 0
       },
@@ -79,7 +79,7 @@
       },
       {
         "indicator": "Order Book Depth",
-        "reading": "wall=none, strength 0.000, top5_bid=0.00 vs top5_ask=0.00",
+        "reading": "wall=none, strength 0.000",
         "signal": "NEUTRAL",
         "score": 0
       },
@@ -110,34 +110,34 @@
     "confluence_count": 1,
     "meets_minimum": false,
     "bull_case": "No bull case due to insufficient confluence and bear regime context.",
-    "bear_case": "Bear agent argues for no trade due to insufficient confluence, bear regime, and neutral CVD matrix state.",
+    "bear_case": "Bear agent argues for no trade due to insufficient confluence (1/7 required), bear regime, and neutral CVD matrix state.",
     "verdict": "NO_TRADE",
     "confidence_score": 30,
     "entry_trigger": "None",
-    "stop_price": 0.0,
+    "stop_price": 0,
     "stop_reasoning": "Not applicable",
-    "target_1": 0.0,
-    "target_2": 0.0,
+    "target_1": 0,
+    "target_2": 0,
     "leverage_recommended": 1,
-    "position_size_coins": 0.0,
+    "position_size_coins": 0,
     "pre_trade_note_why": "Insufficient confluence and bear regime context.",
-    "pre_trade_note_wrong": "Any condition that would increase confluence count above minimum required.",
+    "pre_trade_note_wrong": "Price breaks below last higher low.",
     "pre_trade_note_add": "None",
-    "failure_mode": "Any failure to meet minimum confluence or regime requirements.",
-    "session_adjustment": "NY session context does not alter the no-trade recommendation.",
-    "regime_adjustment": "Bear regime context supports the no-trade recommendation.",
+    "failure_mode": "When price breaks below last higher low or confluence count remains below minimum required.",
+    "session_adjustment": "NY session context does not override the bear regime and insufficient confluence.",
+    "regime_adjustment": "Bear regime context aligns with the no-trade verdict.",
     "playbook_rules_cited": [
       "Part 3: BOTH_FLAT CVD matrix state \u2014 no directional conviction",
-      "Part 8: Risk management rules \u2014 insufficient confluence"
+      "Part 8: Risk management \u2014 insufficient confluence"
     ]
   },
   "mantle_signals": null,
   "global_market": {
     "available": true,
     "btc_dominance": 56.41,
-    "eth_dominance": 9.25,
-    "stablecoin_dom": 7.88,
-    "mcap_change_24h": 4.57,
+    "eth_dominance": 9.32,
+    "stablecoin_dom": 7.81,
+    "mcap_change_24h": 5.39,
     "risk_sentiment": "RISK_ON",
     "altcoin_season": false,
     "btc_dom_signal": "REDUCE_ALTCOIN_CONFIDENCE",
@@ -167,11 +167,11 @@
     "risk_sentiment": "RISK_ON"
   },
   "enforcement_applied": false,
-  "snapshot_hash": "1b091d388c1185aa5fce0929bd1dbf1efeb86a044b6adc0a25615d8e69c6bfee",
-  "data_hash": "8589a37933f554b9f9ae84d660cbb1ba2a506dbdef7e89f30a62e2b2b6c5e696",
-  "hash_payload_json": "{\"analysis_timestamp_utc_minute\":\"2026-06-15T15:02:00Z\",\"base_direction\":\"NEUTRAL\",\"confidence_calibrated\":false,\"confidence_score\":30,\"confluence_count\":1,\"cvd_matrix_state\":\"BOTH_FLAT\",\"entry_trigger\":\"None\",\"failure_mode\":\"Any failure to meet minimum confluence or regime requirements.\",\"leverage_recommended\":1,\"macro_regime\":\"BEAR\",\"playbook_prompt_hash\":\"be5580949d7d1941\",\"playbook_rules_cited\":[\"Part 3: BOTH_FLAT CVD matrix state \\u2014 no directional conviction\",\"Part 8: Risk management rules \\u2014 insufficient confluence\"],\"pre_trade_note_add\":\"None\",\"pre_trade_note_why\":\"Insufficient confluence and bear regime context.\",\"pre_trade_note_wrong\":\"Any condition that would increase confluence count above minimum required.\",\"scenario\":\"S6_BOTTOM_FORMING\",\"snapshot_hash\":\"1b091d388c1185aa5fce0929bd1dbf1efeb86a044b6adc0a25615d8e69c6bfee\",\"stop_price\":0.0,\"symbol\":\"BTCUSDT\",\"target_1\":0.0,\"verdict\":\"NO_TRADE\",\"verdict_overridden\":false}",
-  "audit_tx_hash": "6f992f4a4d448cb0a27c700f9541829c98d7f490e8b5513cff0b1f49661e9afe",
-  "audit_explorer_url": "https://explorer.sepolia.mantle.xyz/tx/6f992f4a4d448cb0a27c700f9541829c98d7f490e8b5513cff0b1f49661e9afe",
-  "audit_block": 39995541,
+  "snapshot_hash": "a542c735deb67115528ff8eed8f0c2b1a4c2b355081c2adb7abd886d4eb9f83a",
+  "data_hash": "81bf61451a26dab4a02e4c32385e31681652cee03efa77515d2b5b3c228cc563",
+  "hash_payload_json": "{\"analysis_timestamp_utc_minute\":\"2026-06-15T16:45:00Z\",\"base_direction\":\"NEUTRAL\",\"confidence_calibrated\":false,\"confidence_score\":30,\"confluence_count\":1,\"cvd_matrix_state\":\"BOTH_FLAT\",\"entry_trigger\":\"None\",\"failure_mode\":\"When price breaks below last higher low or confluence count remains below minimum required.\",\"leverage_recommended\":1,\"macro_regime\":\"BEAR\",\"playbook_prompt_hash\":\"be5580949d7d1941\",\"playbook_rules_cited\":[\"Part 3: BOTH_FLAT CVD matrix state \\u2014 no directional conviction\",\"Part 8: Risk management \\u2014 insufficient confluence\"],\"pre_trade_note_add\":\"None\",\"pre_trade_note_why\":\"Insufficient confluence and bear regime context.\",\"pre_trade_note_wrong\":\"Price breaks below last higher low.\",\"scenario\":\"S6_BOTTOM_FORMING\",\"snapshot_hash\":\"a542c735deb67115528ff8eed8f0c2b1a4c2b355081c2adb7abd886d4eb9f83a\",\"stop_price\":0,\"symbol\":\"BTCUSDT\",\"target_1\":0,\"verdict\":\"NO_TRADE\",\"verdict_overridden\":false}",
+  "audit_tx_hash": "efa620dbb565f2f987633d4d12c8179987810bfe411841af496be49a3a567aa0",
+  "audit_explorer_url": "https://explorer.sepolia.mantle.xyz/tx/efa620dbb565f2f987633d4d12c8179987810bfe411841af496be49a3a567aa0",
+  "audit_block": 39998621,
   "contract_address": "0xe94812EA9dBb21C71BeB50A4c17DC3962023dE00"
 }

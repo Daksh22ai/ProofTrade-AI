@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { createChart, ColorType, CrosshairMode } from 'lightweight-charts'
 import { api } from '../api.js'
 
-// Base chart options — watermark disabled so no TradingView logo appears
+// Base chart options - watermark disabled so no TradingView logo appears
 const BASE_OPTS = {
   layout: {
     background: { type: ColorType.Solid, color: '#0A0E1A' },
