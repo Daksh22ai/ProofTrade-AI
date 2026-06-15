@@ -1,0 +1,117 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --mantle: #00D4AA;
+  --dark:   #0A0E1A;
+  --card:   #0F1629;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--dark);
+  color: #C9D1D9;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--dark); }
+::-webkit-scrollbar-thumb { background: #1a2744; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #00D4AA44; }
+
+/* Glassmorphism base */
+.glass {
+  background: rgba(15, 22, 41, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 212, 170, 0.08);
+}
+
+.glass-hover:hover {
+  border-color: rgba(0, 212, 170, 0.2);
+  background: rgba(20, 28, 53, 0.9);
+}
+
+/* Animated grid background */
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(0,212,170,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,170,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Mantle glow */
+.mantle-glow {
+  box-shadow: 0 0 20px rgba(0, 212, 170, 0.15), 0 0 60px rgba(0, 212, 170, 0.05);
+}
+
+.mantle-glow-text {
+  text-shadow: 0 0 20px rgba(0, 212, 170, 0.4);
+}
+
+/* Verdict colors */
+.verdict-strong-long  { color: #00D4AA; }
+.verdict-long         { color: #00CC88; }
+.verdict-strong-short { color: #FF6B6B; }
+.verdict-short        { color: #FF4444; }
+.verdict-no-trade     { color: #FFD700; }
+.verdict-neutral      { color: #6b7280; }
+
+/* Animated underline for tabs */
+.tab-active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #00D4AA;
+  border-radius: 1px;
+}
+
+/* Number flash animation */
+@keyframes numFlash {
+  0%   { color: #00D4AA; }
+  100% { color: inherit; }
+}
+.num-flash { animation: numFlash 0.6s ease-out; }
+
+/* Pulse ring for live indicator */
+@keyframes pulseRing {
+  0%   { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(2); opacity: 0; }
+}
+.pulse-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #00D4AA;
+  animation: pulseRing 1.5s ease-out infinite;
+}
+
+/* Chart container */
+.chart-container {
+  border-radius: 4px;
+  overflow: hidden;
+  background: #0A0E1A;
+}
+
+/* Sidebar scrollbar */
+aside::-webkit-scrollbar { width: 4px; }
+aside::-webkit-scrollbar-track { background: transparent; }
+aside::-webkit-scrollbar-thumb { background: #1a2744; border-radius: 2px; }
+
+/* Main content scrollbar */
+main::-webkit-scrollbar { width: 6px; }
+main::-webkit-scrollbar-track { background: transparent; }
+main::-webkit-scrollbar-thumb { background: #1a2744; border-radius: 3px; }
+
+/* Terminal enforces its own overflow. Landing scrolls normally. */
+html { height: 100%; }
+body { min-height: 100%; }
+#root { height: 100%; }

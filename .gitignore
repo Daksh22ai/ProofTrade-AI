@@ -1,0 +1,44 @@
+# ── Secrets ───────────────────────────────────────────────────────────────────
+.env
+*.pem
+*.key
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# ── Node / Hardhat ────────────────────────────────────────────────────────────
+node_modules/
+on_chain/cache/
+on_chain/artifacts/
+on_chain/.hardhat-cache/
+
+# ── Frontend build output ─────────────────────────────────────────────────────
+frontend/dist/
+frontend/node_modules/
+
+# ── Runtime outputs (auto-generated, large) ───────────────────────────────────
+analysis_results/*.json          # keep .gitkeep, ignore actual results
+logs/
+stat_logs/
+raw_ws_logs/
+
+# ── Temporary dev artifacts ───────────────────────────────────────────────────
+docx_extract_tmp/
+playbook_extracted.txt
+error_data_injection.txt
+scenario_correlation_report.json
+backtest_results/
+playbook_extracted.txt
+error_data_injection.txt
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo

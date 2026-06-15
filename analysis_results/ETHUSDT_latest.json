@@ -1,0 +1,207 @@
+{
+  "symbol": "ETHUSDT",
+  "timestamp_utc": "2026-06-15T15:03:33.458869+00:00",
+  "current_price": 1724.77,
+  "session": "NY",
+  "scenario_number": 6,
+  "scenario_name": "BOTTOM_FORMING",
+  "base_direction": "NEUTRAL",
+  "decision_tree_trace": {
+    "range_shortcut": false,
+    "Q1_above_vwma": false,
+    "Q2B_spot_cvd_falling": false
+  },
+  "cvd_matrix_state": "BOTH_FLAT",
+  "macro_regime": {
+    "macro_regime": "BEAR",
+    "btc_above_vwma_20d": false,
+    "btc_above_ema_4h_21": true,
+    "funding_bucket": "near_zero",
+    "oi_trend": "flat",
+    "session": "NY",
+    "near_funding_reset": false,
+    "bias": "SHORTS_OR_FLAT",
+    "max_leverage": 5,
+    "min_confluences": 7,
+    "session_leverage_cap": 5,
+    "position_size_cap_pct": 100,
+    "reasoning": "Part 0A BEAR rule driven by price below 20D VWMA and Part 1 NY session rule applying full table with high reliability for trending scenarios."
+  },
+  "analysis": {
+    "indicator_scores": [
+      {
+        "indicator": "VWMA 20D",
+        "reading": "price 2.77% below 20D VWMA of $1773.8994493462499",
+        "signal": "BEARISH",
+        "score": 0
+      },
+      {
+        "indicator": "Long/Short Ratio",
+        "reading": "buy_ratio 73.6% \u2014 extreme_long=True \u2014 contrarian signal BEARISH",
+        "signal": "BEARISH",
+        "score": 0
+      },
+      {
+        "indicator": "Futures CVD",
+        "reading": "direction flat, slope 0.00000",
+        "signal": "NEUTRAL",
+        "score": 1
+      },
+      {
+        "indicator": "Spot CVD",
+        "reading": "direction flat [source: binance_spot], slope 0.00000",
+        "signal": "NEUTRAL",
+        "score": 1
+      },
+      {
+        "indicator": "Bid/Ask Delta",
+        "reading": "ratio 0.0000 [neutral] (>0 = more bids = buying pressure)",
+        "signal": "NEUTRAL",
+        "score": 1
+      },
+      {
+        "indicator": "Funding Rate",
+        "reading": "0.000000 per 8h [unknown] | extreme+: False | extreme-: False",
+        "signal": "NEUTRAL",
+        "score": 1
+      },
+      {
+        "indicator": "Open Interest",
+        "reading": "trend unknown (slope=0.00000)",
+        "signal": "NEUTRAL",
+        "score": 1
+      },
+      {
+        "indicator": "Liq Levels",
+        "reading": "long liq $0 | short liq $0 \u2014 top levels: []",
+        "signal": "NEUTRAL",
+        "score": 1
+      },
+      {
+        "indicator": "Order Book Depth",
+        "reading": "wall=none | strength=0.000 | top5_bid=0.00 vs top5_ask=0.00 | signal=NEUTRAL",
+        "signal": "NEUTRAL",
+        "score": 1
+      },
+      {
+        "indicator": "MACD",
+        "reading": "histogram 6.735658137058465, above zero",
+        "signal": "BULLISH",
+        "score": 0
+      },
+      {
+        "indicator": "RSI",
+        "reading": "RSI 81.44647376719058 \u2014 overbought >70",
+        "signal": "BEARISH",
+        "score": 0
+      },
+      {
+        "indicator": "VPVR",
+        "reading": "POC=$1667.5727 | in_HVN=False | in_LVN=True",
+        "signal": "BEARISH",
+        "score": 0
+      }
+    ],
+    "mantle_signal_score": {
+      "reading": "mETH Yield: 4.5% APY, vs ETH funding annualized: 0.0%, mETH Carry Signal: BEARISH",
+      "signal": "CAUTIOUS_BEARISH",
+      "score": 0
+    },
+    "confluence_count": 4,
+    "meets_minimum": false,
+    "bull_case": "No bull case due to insufficient confluence and bearish indicators.",
+    "bear_case": "Bear agent argues for no trade due to insufficient confluence count (4 < 7), bearish indicators, and a bear regime.",
+    "verdict": "NO_TRADE",
+    "confidence_score": 30,
+    "entry_trigger": "None",
+    "stop_price": 0.0,
+    "stop_reasoning": "Not applicable",
+    "target_1": 0.0,
+    "target_2": 0.0,
+    "leverage_recommended": 1,
+    "position_size_coins": 0.0,
+    "pre_trade_note_why": "Insufficient confluence and bearish indicators.",
+    "pre_trade_note_wrong": "Confluence count below minimum or bearish indicators.",
+    "pre_trade_note_add": "None",
+    "failure_mode": "Insufficient confluence or bearish indicators.",
+    "session_adjustment": "NY session, but insufficient confluence.",
+    "regime_adjustment": "Bear regime, insufficient confluence for a trade.",
+    "playbook_rules_cited": [
+      "Part 0A BEAR rule driven by price below 20D VWMA",
+      "Part 3: BOTH_FLAT CVD matrix state",
+      "Part 8: Risk management and position sizing"
+    ]
+  },
+  "mantle_signals": {
+    "meth_yield_signal": {
+      "available": true,
+      "signal": "BEARISH",
+      "reasoning": "mETH staking (4.5% APY) yields 4.5% more than ETH perp longs \u2014 structural incentive to unwind longs",
+      "data_source": "mantle-staking-baseline-4.5%",
+      "meth_exchange_rate": null,
+      "meth_apy_pct": 4.5,
+      "eth_funding_8h": 0.0,
+      "eth_funding_annualized_pct": 0.0,
+      "carry_edge_bps": -450.0,
+      "mantle_asset": "mETH",
+      "mantle_protocol": "Mantle Liquid Staking"
+    },
+    "fusionx_dex_cvd": {
+      "available": true,
+      "cvd_delta": 0.0,
+      "direction": "flat",
+      "swap_count": 0,
+      "pool_address": "0x262255F4770aEbE2D0C8b97a46287dCeCc2a0AfF",
+      "pair": "WMNT/USDT",
+      "dex": "FusionX",
+      "blocks_scanned": 5000,
+      "minutes_scanned": 166,
+      "reason": "No swaps in last 5000 blocks (~166 min)"
+    },
+    "combined_direction": "CAUTIOUS_BEARISH",
+    "combined_note": "Partial Mantle ecosystem pressure on bulls",
+    "timestamp_utc": "2026-06-15T15:03:33.458869+00:00"
+  },
+  "global_market": {
+    "available": true,
+    "btc_dominance": 56.41,
+    "eth_dominance": 9.25,
+    "stablecoin_dom": 7.88,
+    "mcap_change_24h": 4.57,
+    "risk_sentiment": "RISK_ON",
+    "altcoin_season": false,
+    "btc_dom_signal": "REDUCE_ALTCOIN_CONFIDENCE",
+    "stablecoin_trend_note": "stablecoin dominance high \u2014 sideline capital available (BULL fuel)"
+  },
+  "snapshot_raw": {
+    "vwma_20d": 1773.8994493462499,
+    "above_vwma_20d": false,
+    "ema_4h_21": 1673.2125151685289,
+    "above_ema_4h_21": true,
+    "rsi_14": 81.44647376719058,
+    "atr_14": 11.971887593368898,
+    "oi_trend": "unknown",
+    "oi_slope": 0.0,
+    "spot_cvd_direction": "flat",
+    "spot_cvd_source": "binance_spot",
+    "futures_cvd_direction": "flat",
+    "funding_current": 0.0,
+    "funding_bucket": "unknown",
+    "lsr_buy": 0.736,
+    "lsr_sell": 0.264,
+    "lsr_signal": "BEARISH",
+    "ob_wall_side": "none",
+    "macd_histogram": 6.735658137058465,
+    "macd_above_zero": true,
+    "btc_dominance": 56.41,
+    "risk_sentiment": "RISK_ON"
+  },
+  "enforcement_applied": false,
+  "snapshot_hash": "e806e4b046d4b6fb1d5014baf7ea15229c9413c69859d199a33b1e54444e6167",
+  "data_hash": "276513667ab9814dc9151490f9b6dcfcc24d58ba2b9bed9a878230e3bacd0757",
+  "hash_payload_json": "{\"analysis_timestamp_utc_minute\":\"2026-06-15T15:03:00Z\",\"base_direction\":\"NEUTRAL\",\"confidence_calibrated\":false,\"confidence_score\":30,\"confluence_count\":4,\"cvd_matrix_state\":\"BOTH_FLAT\",\"entry_trigger\":\"None\",\"failure_mode\":\"Insufficient confluence or bearish indicators.\",\"leverage_recommended\":1,\"macro_regime\":\"BEAR\",\"playbook_prompt_hash\":\"be5580949d7d1941\",\"playbook_rules_cited\":[\"Part 0A BEAR rule driven by price below 20D VWMA\",\"Part 3: BOTH_FLAT CVD matrix state\",\"Part 8: Risk management and position sizing\"],\"pre_trade_note_add\":\"None\",\"pre_trade_note_why\":\"Insufficient confluence and bearish indicators.\",\"pre_trade_note_wrong\":\"Confluence count below minimum or bearish indicators.\",\"scenario\":\"S6_BOTTOM_FORMING\",\"snapshot_hash\":\"e806e4b046d4b6fb1d5014baf7ea15229c9413c69859d199a33b1e54444e6167\",\"stop_price\":0.0,\"symbol\":\"ETHUSDT\",\"target_1\":0.0,\"verdict\":\"NO_TRADE\",\"verdict_overridden\":false}",
+  "audit_tx_hash": "db147f9985f82e43c5a3514a98288582016aaed03145be78eeb4066e7576d9c1",
+  "audit_explorer_url": "https://explorer.sepolia.mantle.xyz/tx/db147f9985f82e43c5a3514a98288582016aaed03145be78eeb4066e7576d9c1",
+  "audit_block": 39995576,
+  "contract_address": "0xe94812EA9dBb21C71BeB50A4c17DC3962023dE00"
+}

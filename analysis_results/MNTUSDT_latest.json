@@ -1,0 +1,206 @@
+{
+  "symbol": "MNTUSDT",
+  "timestamp_utc": "2026-06-15T15:03:39.819887+00:00",
+  "current_price": 0.5684,
+  "session": "NY",
+  "scenario_number": 8,
+  "scenario_name": "RANGING_CONSOLIDATION",
+  "base_direction": "NEUTRAL",
+  "decision_tree_trace": {
+    "range_shortcut": true
+  },
+  "cvd_matrix_state": "BOTH_FLAT",
+  "macro_regime": {
+    "macro_regime": "BEAR",
+    "btc_above_vwma_20d": false,
+    "btc_above_ema_4h_21": true,
+    "funding_bucket": "near_zero",
+    "oi_trend": "flat",
+    "session": "NY",
+    "near_funding_reset": false,
+    "bias": "SHORTS_OR_FLAT",
+    "max_leverage": 5,
+    "min_confluences": 7,
+    "session_leverage_cap": 5,
+    "position_size_cap_pct": 100,
+    "reasoning": "Part 0A BEAR rule driven by price below 20D VWMA and Part 1 NY session rule applying full table with high reliability for trending scenarios."
+  },
+  "analysis": {
+    "indicator_scores": [
+      {
+        "indicator": "VWMA 20D",
+        "reading": "price 2.03% below 20D VWMA of $0.5886957885712825",
+        "signal": "BEARISH",
+        "score": 0
+      },
+      {
+        "indicator": "Long/Short Ratio",
+        "reading": "buy_ratio 0.8218 / sell=0.1782 \u2014 extreme_long=True \u2014 contrarian signal=BEARISH",
+        "signal": "BEARISH",
+        "score": 0
+      },
+      {
+        "indicator": "Futures CVD",
+        "reading": "direction flat, slope 0.00000",
+        "signal": "NEUTRAL",
+        "score": 1
+      },
+      {
+        "indicator": "Spot CVD",
+        "reading": "direction flat [source: binance_spot_fallback], slope 0.00000",
+        "signal": "NEUTRAL",
+        "score": 1
+      },
+      {
+        "indicator": "Bid/Ask Delta",
+        "reading": "ratio 0.0000 [neutral] (>0 = more bids = buying pressure)",
+        "signal": "NEUTRAL",
+        "score": 1
+      },
+      {
+        "indicator": "Funding Rate",
+        "reading": "0.000090 per 8h [near_zero] \u2014 extreme+: False \u2014 extreme-: False",
+        "signal": "NEUTRAL",
+        "score": 1
+      },
+      {
+        "indicator": "Open Interest",
+        "reading": "trend flat (slope=-0.00068)",
+        "signal": "NEUTRAL",
+        "score": 1
+      },
+      {
+        "indicator": "Liq Levels",
+        "reading": "long liq $0 | short liq $0 \u2014 top levels: []",
+        "signal": "NEUTRAL",
+        "score": 1
+      },
+      {
+        "indicator": "Order Book Depth",
+        "reading": "wall=none | strength=0.000 | top5_bid=0.00 vs top5_ask=0.00 | signal=NEUTRAL",
+        "signal": "NEUTRAL",
+        "score": 1
+      },
+      {
+        "indicator": "MACD",
+        "reading": "histogram 0.001207981079516726, above zero",
+        "signal": "BULLISH",
+        "score": 0
+      },
+      {
+        "indicator": "RSI",
+        "reading": "RSI 63.478039501045046 \u2014 neutral 30-70",
+        "signal": "NEUTRAL",
+        "score": 1
+      },
+      {
+        "indicator": "VPVR",
+        "reading": "POC=$0.683 | in_HVN=False | in_LVN=True",
+        "signal": "BEARISH",
+        "score": 0
+      }
+    ],
+    "mantle_signal_score": {
+      "reading": "Combined Mantle signal: CAUTIOUS_BEARISH \u2014 Cached FusionX DEX CVD (0 swaps)",
+      "signal": "BEARISH",
+      "score": 0
+    },
+    "confluence_count": 7,
+    "meets_minimum": true,
+    "bull_case": "No strong bull case due to BEAR regime, flat CVD matrix state, and bearish mantle ecosystem signals.",
+    "bear_case": "Bear agent argues for NO_TRADE due to BEAR regime, flat CVD matrix state, and bearish mantle ecosystem signals, aligning with the decision tree result of RANGING_CONSOLIDATION.",
+    "verdict": "NO_TRADE",
+    "confidence_score": 40,
+    "entry_trigger": "None, as the verdict is NO_TRADE.",
+    "stop_price": null,
+    "stop_reasoning": null,
+    "target_1": null,
+    "target_2": null,
+    "leverage_recommended": null,
+    "position_size_coins": null,
+    "pre_trade_note_why": "No trade due to insufficient confluence and bearish regime.",
+    "pre_trade_note_wrong": "A strong bullish signal from the CVD matrix or a shift to a BULL regime would invalidate this thesis.",
+    "pre_trade_note_add": "None, as the verdict is NO_TRADE.",
+    "failure_mode": "If the price breaks out of the current range with strong volume and a bullish CVD signal, this scenario would be considered failed.",
+    "session_adjustment": "The NY session context does not alter the recommendation, as the BEAR regime and flat CVD matrix state dominate the analysis.",
+    "regime_adjustment": "The BEAR regime context significantly influences the recommendation, leading to a NO_TRADE verdict due to the lack of a strong bull case.",
+    "playbook_rules_cited": [
+      "Part 0A BEAR rule driven by price below 20D VWMA",
+      "Part 3: BOTH_FLAT CVD matrix state \u2014 no directional conviction",
+      "Part 8: RANGING_CONSOLIDATION scenario from the decision tree"
+    ],
+    "confidence_calibrated": true,
+    "confidence_original": 45
+  },
+  "mantle_signals": {
+    "meth_yield_signal": {
+      "available": true,
+      "signal": "BEARISH",
+      "reasoning": "mETH staking (4.5% APY) yields 4.5% more than ETH perp longs \u2014 structural incentive to unwind longs",
+      "data_source": "mantle-staking-baseline-4.5%",
+      "meth_exchange_rate": null,
+      "meth_apy_pct": 4.5,
+      "eth_funding_8h": 0.0,
+      "eth_funding_annualized_pct": 0.0,
+      "carry_edge_bps": -450.0,
+      "mantle_asset": "mETH",
+      "mantle_protocol": "Mantle Liquid Staking"
+    },
+    "fusionx_dex_cvd": {
+      "available": true,
+      "cvd_delta": 0.0,
+      "direction": "flat",
+      "swap_count": 0,
+      "pool_address": "0x262255F4770aEbE2D0C8b97a46287dCeCc2a0AfF",
+      "pair": "WMNT/USDT",
+      "dex": "FusionX",
+      "blocks_scanned": 5000,
+      "minutes_scanned": 166,
+      "reason": "No swaps in last 5000 blocks (~166 min)"
+    },
+    "combined_direction": "CAUTIOUS_BEARISH",
+    "combined_note": "Cached FusionX DEX CVD (0 swaps)"
+  },
+  "global_market": {
+    "available": true,
+    "btc_dominance": 56.41,
+    "eth_dominance": 9.25,
+    "stablecoin_dom": 7.88,
+    "mcap_change_24h": 4.57,
+    "risk_sentiment": "RISK_ON",
+    "altcoin_season": false,
+    "btc_dom_signal": "REDUCE_ALTCOIN_CONFIDENCE",
+    "stablecoin_trend_note": "stablecoin dominance high \u2014 sideline capital available (BULL fuel)"
+  },
+  "snapshot_raw": {
+    "vwma_20d": 0.5886957885712825,
+    "above_vwma_20d": false,
+    "ema_4h_21": 0.5491950221471974,
+    "above_ema_4h_21": true,
+    "rsi_14": 63.478039501045046,
+    "atr_14": 0.005272298263372001,
+    "oi_trend": "flat",
+    "oi_slope": -0.000684,
+    "spot_cvd_direction": "flat",
+    "spot_cvd_source": "binance_spot_fallback",
+    "futures_cvd_direction": "flat",
+    "funding_current": 9.029e-05,
+    "funding_bucket": "near_zero",
+    "lsr_buy": 0.8218,
+    "lsr_sell": 0.1782,
+    "lsr_signal": "BEARISH",
+    "ob_wall_side": "none",
+    "macd_histogram": 0.001207981079516726,
+    "macd_above_zero": true,
+    "btc_dominance": 56.41,
+    "risk_sentiment": "RISK_ON"
+  },
+  "enforcement_applied": true,
+  "snapshot_hash": "5684b79b0a5894eaa87826b74aaa04099460857d4bd099abf5598f0e5603d3a7",
+  "data_hash": "1e89ade7aca0cf502abb58447d4d7e29347e0e686379ab28d3074c832a281713",
+  "hash_payload_json": "{\"analysis_timestamp_utc_minute\":\"2026-06-15T15:03:00Z\",\"base_direction\":\"NEUTRAL\",\"confidence_calibrated\":true,\"confidence_score\":40,\"confluence_count\":7,\"cvd_matrix_state\":\"BOTH_FLAT\",\"entry_trigger\":\"None, as the verdict is NO_TRADE.\",\"failure_mode\":\"If the price breaks out of the current range with strong volume and a bullish CVD signal, this scenario would be considered failed.\",\"leverage_recommended\":null,\"macro_regime\":\"BEAR\",\"playbook_prompt_hash\":\"be5580949d7d1941\",\"playbook_rules_cited\":[\"Part 0A BEAR rule driven by price below 20D VWMA\",\"Part 3: BOTH_FLAT CVD matrix state \\u2014 no directional conviction\",\"Part 8: RANGING_CONSOLIDATION scenario from the decision tree\"],\"pre_trade_note_add\":\"None, as the verdict is NO_TRADE.\",\"pre_trade_note_why\":\"No trade due to insufficient confluence and bearish regime.\",\"pre_trade_note_wrong\":\"A strong bullish signal from the CVD matrix or a shift to a BULL regime would invalidate this thesis.\",\"scenario\":\"S8_RANGING_CONSOLIDATION\",\"snapshot_hash\":\"5684b79b0a5894eaa87826b74aaa04099460857d4bd099abf5598f0e5603d3a7\",\"stop_price\":null,\"symbol\":\"MNTUSDT\",\"target_1\":null,\"verdict\":\"NO_TRADE\",\"verdict_overridden\":false}",
+  "audit_tx_hash": "42ecb9693a845fafd17c0330c4e2564f0a4d1290d136fdaab916d53ffdc4b40d",
+  "audit_explorer_url": "https://explorer.sepolia.mantle.xyz/tx/42ecb9693a845fafd17c0330c4e2564f0a4d1290d136fdaab916d53ffdc4b40d",
+  "audit_block": 39995586,
+  "contract_address": "0xe94812EA9dBb21C71BeB50A4c17DC3962023dE00"
+}

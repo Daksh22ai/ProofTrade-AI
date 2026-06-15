@@ -1,0 +1,41 @@
+# ── Data pipeline (existing) ──────────────────────────────────────────────
+pybit==5.15.0
+msgspec==0.20.0
+kafka-python==2.3.1
+prometheus_client==0.21.0
+opentelemetry-sdk==1.42.0
+websocket-client>=1.6.0
+pydantic>=2.0.0
+
+# ── AI agents ─────────────────────────────────────────────────────────────
+groq>=0.9.0
+tenacity>=8.2.3
+
+# ── On-chain / Mantle ─────────────────────────────────────────────────────
+web3>=6.15.0
+eth-account>=0.10.0
+
+# ── Data computation ──────────────────────────────────────────────────────
+pandas>=2.1.0
+numpy>=1.26.0
+
+# ── QuestDB reads ─────────────────────────────────────────────────────────
+pg8000>=1.30.0
+
+# ── API backend (FastAPI replaces Streamlit as primary frontend server) ────
+fastapi>=0.111.0
+uvicorn[standard]>=0.30.0
+sse-starlette>=1.8.0
+
+# ── Dashboard (Streamlit kept as fallback) ─────────────────────────────────
+streamlit>=1.33.0
+plotly>=5.18.0
+streamlit-autorefresh>=1.0.1
+
+# ── Testing ────────────────────────────────────────────────────────────────
+pytest>=8.0.0
+
+# ── Utilities ─────────────────────────────────────────────────────────────
+python-dotenv>=1.0.0
+requests>=2.31.0
+urllib3>=2.0.0
