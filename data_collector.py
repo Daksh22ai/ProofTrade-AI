@@ -9,7 +9,7 @@ import signal
 import asyncio
 import urllib.request
 import urllib.parse
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from typing import List, Dict, Optional
 from dataclasses import dataclass, field
 from math import ceil
@@ -25,13 +25,13 @@ except ImportError:
 from kafka import KafkaProducer, KafkaConsumer
 from kafka.admin import KafkaAdminClient, NewTopic, NewPartitions
 from threading import Thread
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from prometheus_client import start_http_server, Counter, Gauge
-from pydantic import BaseModel, Field, ValidationError, field_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator, ConfigDict
 import socket
 
-from pybit.unified_trading import HTTP, WebSocket
+from pybit.unified_trading import HTTP
 from pybit.exceptions import InvalidRequestError
-from websocket import WebSocketApp
 
 # === Configuration ===
 @dataclass
@@ -111,15 +111,15 @@ class SystemConfig:
     max_symbols_per_ws: int = 16  # Conservative for stability
     max_concurrent_ws: int = 50
 
-    # Filtering low amount of trades
-    TRADE_FILTER_THRESHOLD = 1000
-    
     # Data Collection
     start_date: str = "2026-03-17"  # 90-day window for hackathon demo
     # Monitoring
     status_report_interval: int = 30
+    # Runtime-populated symbol list (set in main() after discovery)
+    symbols: list = field(default_factory=list)
 
 config = SystemConfig()
+TRADE_FILTER_THRESHOLD = 1000  # minimum trade USD value to store (filters micro-trades)
 
 class Metrics:
     def __init__(self):
@@ -154,8 +154,6 @@ _db_manager: Optional["OptimizedDatabaseManager"] = None
 
 
 # === QuestDB HTTP Utility (stdlib only, no new deps) ===
-import urllib.request
-import urllib.parse
 
 def _questdb_exec(sql: str, host: str = None, timeout: int = 5) -> Optional[dict]:
     """
@@ -245,11 +243,14 @@ _CREATE_TABLE_SQLS: List[str] = [
         timestamp TIMESTAMP
     ) TIMESTAMP(timestamp) PARTITION BY DAY WAL DEDUP UPSERT KEYS(timestamp, symbol)""",
 
+    # Bybit WS liquidations have no unique ID.
+    # Key on (timestamp, symbol, side, price, size) minimizes but cannot fully prevent
+    # sub-ms same-symbol same-side same-price collisions.
     """CREATE TABLE IF NOT EXISTS liquidations (
         symbol SYMBOL, side SYMBOL,
         price DOUBLE, size DOUBLE,
         timestamp TIMESTAMP
-    ) TIMESTAMP(timestamp) PARTITION BY DAY WAL DEDUP UPSERT KEYS(timestamp, symbol, side)""",
+    ) TIMESTAMP(timestamp) PARTITION BY DAY WAL DEDUP UPSERT KEYS(timestamp, symbol, side, price, size)""",
 ]
 
 def create_questdb_tables():
@@ -361,7 +362,7 @@ _DEDUP_DDL = [
     "ALTER TABLE open_interest   DEDUP ENABLE UPSERT KEYS(timestamp, symbol, interval)",
     "ALTER TABLE long_short_ratio DEDUP ENABLE UPSERT KEYS(timestamp, symbol, interval)",
     "ALTER TABLE orderbook       DEDUP ENABLE UPSERT KEYS(timestamp, symbol)",
-    "ALTER TABLE liquidations    DEDUP ENABLE UPSERT KEYS(timestamp, symbol, side)",
+    "ALTER TABLE liquidations    DEDUP ENABLE UPSERT KEYS(timestamp, symbol, side, price, size)",
 ]
 
 def ensure_table_dedup():
@@ -406,8 +407,9 @@ logger = logging.getLogger(__name__)
 # distinguishes the two for all current dates (2024-2033 range).
 _QDB_TS_US_THRESHOLD = 2_000_000_000_000
 
-_OB_LAST_WRITE_MS: dict = {}   # {symbol: last_written_ms} - orderbook write rate limiter
-OB_WRITE_INTERVAL_MS = 60_000  # write orderbook snapshot at most once per minute per symbol
+_OB_LAST_WRITE_MS: dict = {}        # {symbol: last_written_ms} - orderbook write rate limiter
+_OB_LOCK = threading.Lock()         # guards the 3-step read-compare-write on _OB_LAST_WRITE_MS
+OB_WRITE_INTERVAL_MS = 60_000       # write orderbook snapshot at most once per minute per symbol
 
 # === Prometheus Metrics ===
 # Active metrics only  -  legacy queue_write path metrics have been removed.
@@ -448,8 +450,9 @@ class AdaptiveRateLimiter:
 
     Design principles (from HFT bootstrap crawler patterns):
     1. Token bucket controls sustained req/sec  -  lock held only during state update, not sleep.
-    2. On 10006 (rate-limit hit), drain tokens to zero and sleep until the exact
-       X-Bapi-Limit-Reset-Timestamp from the response header  -  eliminates exponential guessing.
+    2. On rate-limit detection, drain tokens to zero via notify_rate_limit() to pause all
+       workers. The reset timestamp from exchange headers is consumed by pybit internally
+       before our code sees the error, so notify_rate_limit() uses a 1-second fallback.
     3. Success-rate EMA removed  -  it amplified errors by compounding throttle across workers.
        Header-based reset is authoritative; EMA adaptation is noise on market data endpoints.
     4. Startup stagger via stagger_worker() prevents burst at t=0 when all workers race together.
@@ -492,10 +495,12 @@ class AdaptiveRateLimiter:
 
     def notify_rate_limit(self, reset_ts_ms: int = 0) -> None:
         """
-        Called when a 10006 (rate-limit) response is received.
-        Drains the token bucket to zero (stops all workers) and sets a precise
-        wakeup time from the X-Bapi-Limit-Reset-Timestamp header.
-        If reset_ts_ms is not available, falls back to sleeping 1 second.
+        Called when a rate-limit error is detected.
+        Drains the token bucket to zero (stops all workers) and sets a wakeup time.
+        reset_ts_ms can be passed if the caller has the header value; in practice
+        pybit consumes the reset header internally, so callers pass 0 and the
+        1-second fallback fires. The value of this method is shared bucket drain,
+        not exact-header timing.
         """
         with self.lock:
             self.tokens = 0.0   # drain  -  force all threads to wait on next call to wait()
@@ -564,13 +569,15 @@ class InstrumentMetadataManager:
         self.meta = {}
 
     def load(self):
-        logger.info("Loading instrument metadata…")
-        for category in ["linear", "inverse"]:
-            resp = self.api.instruments_info(category=category)
+        logger.info("Loading instrument metadata...")
+        cursor = None
+        page = 0
+        while True:
+            resp = self.api.instruments_info(category="linear", cursor=cursor)
             if resp.get("retCode", 1) != 0:
-                logger.warning(f"Instrument info fetch failed for {category}: {resp.get('retMsg')}")
-                continue
-
+                logger.warning(f"Instrument info fetch failed: {resp.get('retMsg')}")
+                break
+            page += 1
             for itm in resp["result"].get("list", []):
                 symbol = itm["symbol"]
                 launch_ts = int(itm.get("launchTime", 0))
@@ -578,10 +585,12 @@ class InstrumentMetadataManager:
                 self.meta[symbol] = {
                     "launch_ts": launch_ts,
                     "funding_interval": funding_interval,
-                    "category": category
+                    "category": "linear"
                 }
-
-        logger.info(f"Loaded metadata for {len(self.meta)} symbols")
+            cursor = resp["result"].get("nextPageCursor") or None
+            if not cursor:
+                break
+        logger.info(f"Loaded metadata for {len(self.meta)} symbols ({page} pages)")
 
     def get_launch_ts(self, symbol, fallback_ts=None):
         return self.meta.get(symbol, {}).get("launch_ts", fallback_ts)
@@ -610,50 +619,6 @@ class InstrumentMetadataManager:
     
     def get_category(self, symbol, default="linear"):
         return self.meta.get(symbol, {}).get("category", default)
-
-# class QuestDBILPWriter:
-#     """Simple, thread-safe ILP TCP writer for QuestDB."""
-#     def __init__(self, host: str, port: int):
-#         self.host = host
-#         self.port = port
-#         self.lock = threading.Lock()
-#         self.sock = None
-#         self._connect()
-
-#     def _connect(self):
-#         with self.lock:
-#             if self.sock:
-#                 try:
-#                     self.sock.close()
-#                 except Exception:
-#                     pass
-#             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#             self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-#             self.sock.connect((self.host, self.port))
-
-#     def write_line(self, line: str) -> None:
-#         """Send a single ILP line (must end with newline). Thread-safe."""
-#         payload = line if line.endswith("\n") else line + "\n"
-#         start = time.time()
-#         try:
-#             with self.lock:
-#                 self.sock.sendall(payload.encode("utf-8"))
-#             questdb_ingest_success.labels(stream="default").inc()
-#             questdb_ingest_latency.labels(stream="default").set(time.time() - start)
-#         except (BrokenPipeError, ConnectionResetError) as e:
-#             questdb_ingest_fail.labels(stream="default").inc()
-#             logger.warning("QuestDB ILP connection broken, reconnecting: %s", e)
-#             try:
-#                 self._connect()
-#                 with self.lock:
-#                     self.sock.sendall(payload.encode("utf-8"))
-#             except Exception as e2:
-#                 logger.error("QuestDB ILP retry failed: %s", e2)
-#                 raise
-#         except Exception as e:
-#             questdb_ingest_fail.labels(stream="default").inc()
-#             logger.error("QuestDB ILP write failed: %s", e)
-#             raise
 
 # === Database Manager ===
 class OptimizedDatabaseManager:
@@ -785,9 +750,9 @@ class OptimizedDatabaseManager:
                 consumer_poll_latency_s.set(time.monotonic() - t0)
 
                 if records_map:
+                    _local_stats: dict = {}
                     for _tp, records in records_map.items():
                         for msg in records:
-                            # Inline _process_kafka_message to avoid coroutine overhead
                             try:
                                 internal_topic = msg.value.get("topic", "")
                                 data_content   = msg.value.get("data", [])
@@ -795,15 +760,18 @@ class OptimizedDatabaseManager:
                                     continue
                                 data_list = data_content if isinstance(data_content, list) else [data_content]
 
+                                stream = internal_topic.split('.')[0]
                                 for data_item in data_list:
                                     line = self._format_ilp_line_from_topic(internal_topic, data_item)
                                     if line:
                                         local_buf.append(line)
-                                        with self.stats_lock:
-                                            stream = internal_topic.split('.')[0]
-                                            self.stats[f"{stream}_records"] += 1
+                                        _local_stats[f"{stream}_records"] = _local_stats.get(f"{stream}_records", 0) + 1
                             except Exception as e:
                                 logger.error(f"[Consumer-{worker_id}] Message processing error: {e}")
+                    if _local_stats:
+                        with self.stats_lock:
+                            for k, v in _local_stats.items():
+                                self.stats[k] = self.stats.get(k, 0) + v
 
                 # Flush on threshold OR time interval
                 now = time.monotonic()
@@ -824,6 +792,10 @@ class OptimizedDatabaseManager:
         except Exception:
             pass
         logger.info(f"[Consumer-{worker_id}] Stopped")
+    @staticmethod
+    def _coerce_levels(levels: list) -> list:
+        return [[float(p), float(s)] for p, s in (levels or [])]
+
     def _format_ilp_line_from_topic(self, internal_topic: str, data_item: dict) -> Optional[str]:
         """
         Hot path: convert a Kafka message dict directly into a QuestDB ILP line.
@@ -843,7 +815,7 @@ class OptimizedDatabaseManager:
                 ))
 
             elif "publicTrade" in internal_topic or "trades" in internal_topic:
-                if data_item.get("price", 0) * data_item.get("size", 0) < config.TRADE_FILTER_THRESHOLD:
+                if data_item.get("price", 0) * data_item.get("size", 0) < TRADE_FILTER_THRESHOLD:
                     return None
                 return self._format_trades_ilp((
                     data_item["symbol"], data_item["trade_id"],
@@ -856,20 +828,19 @@ class OptimizedDatabaseManager:
             elif "orderbook" in internal_topic:
                 ob_sym = data_item.get("symbol", "")
                 ob_now = int(data_item.get("timestamp", 0))
-                if ob_now - _OB_LAST_WRITE_MS.get(ob_sym, 0) < OB_WRITE_INTERVAL_MS:
-                    return None
-                _OB_LAST_WRITE_MS[ob_sym] = ob_now
+                with _OB_LOCK:
+                    if ob_now - _OB_LAST_WRITE_MS.get(ob_sym, 0) < OB_WRITE_INTERVAL_MS:
+                        return None
+                    _OB_LAST_WRITE_MS[ob_sym] = ob_now
                 # Coerce bids/asks to [[float,float],...] before serializing.
                 # pybit WS returns [["16578.50","0.001"],...] (strings). If embedded raw
                 # into an ILP quoted string, inner " characters terminate the field early
                 # → QuestDB closes the TCP connection → all consumers drop simultaneously.
                 # Pydantic REST path already coerces to float; match that here.
-                def _coerce_levels(levels):
-                    return [[float(p), float(s)] for p, s in (levels or [])]
                 return self._format_orderbook_ilp((
                     data_item["symbol"], data_item["timestamp"],
-                    json.dumps(_coerce_levels(data_item["bids"])),
-                    json.dumps(_coerce_levels(data_item["asks"])),
+                    json.dumps(self._coerce_levels(data_item["bids"])),
+                    json.dumps(self._coerce_levels(data_item["asks"])),
                 ))
 
             elif "liquidation" in internal_topic.lower():
@@ -1030,6 +1001,7 @@ class StreamSchemas:
             return v
 
     class Trade(BaseModel):
+        model_config = ConfigDict(populate_by_name=True)
         symbol: str
         trade_id: str = Field(alias='execId')
         timestamp: int = Field(alias='time')
@@ -1201,7 +1173,6 @@ class RestDataFetcher:
         self.api = BybitV5(self.client)
         self.instrument_meta = instrument_meta
         self.backfill_start_ms = self.start_ms
-        self.backfill_end_ms = int(time.time() * 1000)
         self.rest_records_sent: int = 0   # total records sent to Kafka via REST path
 
 
@@ -1555,99 +1526,114 @@ class RestDataFetcher:
         logger.info(f"[{symbol}] ✅ Kline complete: {total_sent} sent, {batch_count} pages, interval={interval}")
 
     def _fetch_orderbook(self, symbol: str, producer: KafkaProducer):
-        """One-shot orderbook snapshot at backfill time. No pagination needed."""
-        logger.info(f"Fetching orderbook snapshot for {symbol}")
-        api_limiter.wait()
-        try:
-            resp = self.api.orderbook(symbol)
-            # pybit raises on any error  -  if we reach here, retCode == 0
-            result = resp.get("result", {})
-            bids = result.get("b", [])   # Bybit V5: bids key is "b"
-            asks = result.get("a", [])   # Bybit V5: asks key is "a"
-            ts   = result.get("ts", int(time.time() * 1000))
+        """Orderbook snapshot at backfill time with retry."""
+        MAX_RETRIES = 3
+        BASE_BACKOFF = 1.0
+        for attempt in range(MAX_RETRIES):
+            api_limiter.wait()
+            try:
+                resp = self.api.orderbook(symbol)
+                result = resp.get("result", {})
+                bids = result.get("b", [])
+                asks = result.get("a", [])
+                ts   = result.get("ts", int(time.time() * 1000))
 
-            if not bids or not asks:
-                logger.warning(f"Empty orderbook for {symbol}")
+                if not bids or not asks:
+                    logger.warning(f"Empty orderbook for {symbol}")
+                    return
+
+                clean_bids = [[float(b[0]), float(b[1])] for b in bids[:config.orderbook_depth]]
+                clean_asks = [[float(a[0]), float(a[1])] for a in asks[:config.orderbook_depth]]
+
+                try:
+                    payload_model = StreamSchemas.Orderbook(
+                        symbol=symbol, timestamp=ts, bids=clean_bids, asks=clean_asks
+                    )
+                    message = {
+                        "topic":     f"orderbook.{symbol}",
+                        "source":    "rest",
+                        "timestamp": int(time.time() * 1000),
+                        "data":      [payload_model.model_dump()]
+                    }
+                    producer.send(KAFKA_TOPIC, key=symbol.encode(), value=message)
+                    logger.debug(f"Orderbook snapshot sent for {symbol}")
+                except ValidationError as ve:
+                    logger.warning(f"Orderbook validation failed for {symbol}: {ve}")
                 return
 
-            clean_bids = [[float(b[0]), float(b[1])] for b in bids[:config.orderbook_depth]]
-            clean_asks = [[float(a[0]), float(a[1])] for a in asks[:config.orderbook_depth]]
-
-            try:
-                payload_model = StreamSchemas.Orderbook(
-                    symbol=symbol, timestamp=ts, bids=clean_bids, asks=clean_asks
-                )
-                message = {
-                    "topic":     f"orderbook.{symbol}",
-                    "source":    "rest",
-                    "timestamp": int(time.time() * 1000),
-                    "data":      [payload_model.model_dump()]
-                }
-                producer.send(KAFKA_TOPIC, key=symbol.encode(), value=message)
-                logger.debug(f"Orderbook snapshot sent for {symbol}")
-            except ValidationError as ve:
-                logger.warning(f"Orderbook validation failed for {symbol}: {ve}")
-
-        except InvalidRequestError as e:
-            logger.error(f"Orderbook permanent error for {symbol}: {e}")
-        except Exception as e:
-            logger.warning(f"Orderbook fetch failed for {symbol}: {e}")
+            except InvalidRequestError as e:
+                logger.error(f"Orderbook permanent error for {symbol}: {e}")
+                return
+            except Exception as e:
+                if attempt == MAX_RETRIES - 1:
+                    logger.warning(f"Orderbook fetch failed for {symbol} after {MAX_RETRIES} attempts: {e}")
+                    return
+                time.sleep(BASE_BACKOFF * (2 ** attempt))
 
     def _fetch_trades(self, symbol: str, producer: KafkaProducer):
         """Fetch recent trade history from Bybit V5 /v5/market/recent-trade endpoint."""
         logger.info(f"Fetching historical trades for {symbol}")
-        api_limiter.wait()
-        try:
-            resp = self.api.trades(symbol, limit=1000)
-            # pybit raises on any error  -  if here, retCode == 0
-            sent = 0
-            for tr in resp["result"].get("list", []):
-                try:
-                    # Bybit V5 recent-trade fields:
-                    #   execId → trade ID
-                    #   time   → execution timestamp in ms  (NOT 'timestamp')
-                    #   price, size → plain strings
-                    #   side   → 'Buy' | 'Sell'
-                    p  = float(tr.get("price", 0))
-                    sz = float(tr.get("size",  tr.get("qty", 0)))
-                    if p * sz < config.TRADE_FILTER_THRESHOLD:
-                        continue
+        MAX_RETRIES = 3
+        BASE_BACKOFF = 1.0
+        for attempt in range(MAX_RETRIES):
+            api_limiter.wait()
+            try:
+                resp = self.api.trades(symbol, limit=1000)
+                # pybit raises on any error  -  if here, retCode == 0
+                sent = 0
+                for tr in resp["result"].get("list", []):
+                    try:
+                        # Bybit V5 recent-trade fields:
+                        #   execId → trade ID
+                        #   time   → execution timestamp in ms  (NOT 'timestamp')
+                        #   price, size → plain strings
+                        #   side   → 'Buy' | 'Sell'
+                        p  = float(tr.get("price", 0))
+                        sz = float(tr.get("size",  tr.get("qty", 0)))
+                        if p * sz < TRADE_FILTER_THRESHOLD:
+                            continue
 
-                    ts_ms = int(tr.get("time", tr.get("T", tr.get("timestamp", 0))))
-                    if ts_ms == 0:
-                        continue  # skip records with no timestamp
+                        ts_ms = int(tr.get("time", tr.get("T", tr.get("timestamp", 0))))
+                        if ts_ms == 0:
+                            continue  # skip records with no timestamp
 
-                    payload_model = StreamSchemas.Trade(
-                        symbol=symbol,
-                        execId=tr.get("execId", tr.get("i", "")),
-                        time=ts_ms,
-                        side=tr.get("side", tr.get("S", "")),
-                        price=p,
-                        size=sz,
-                    )
-                    message = {
-                        "topic":     f"publicTrade.{symbol}",   # use publicTrade for consumer routing
-                        "source":    "rest",
-                        "timestamp": int(time.time() * 1000),
-                        "data":      [payload_model.model_dump()],
-                    }
-                    producer.send(
-                        KAFKA_TOPIC,
-                        key=symbol.encode(),   # Phase 5: deterministic partition by symbol
-                        value=message
-                    )
-                    sent += 1
+                        payload_model = StreamSchemas.Trade(
+                            symbol=symbol,
+                            execId=tr.get("execId", tr.get("i", "")),
+                            time=ts_ms,
+                            side=tr.get("side", tr.get("S", "")),
+                            price=p,
+                            size=sz,
+                        )
+                        message = {
+                            "topic":     f"publicTrade.{symbol}",   # use publicTrade for consumer routing
+                            "source":    "rest",
+                            "timestamp": int(time.time() * 1000),
+                            "data":      [payload_model.model_dump()],
+                        }
+                        producer.send(
+                            KAFKA_TOPIC,
+                            key=symbol.encode(),   # Phase 5: deterministic partition by symbol
+                            value=message
+                        )
+                        sent += 1
 
-                except ValidationError as ve:
-                    logger.warning(f"Trade validation failed for {symbol}: {ve}")
-                except Exception as e:
-                    logger.debug(f"Trade item skip for {symbol}: {e}")
+                    except ValidationError as ve:
+                        logger.warning(f"Trade validation failed for {symbol}: {ve}")
+                    except Exception as e:
+                        logger.debug(f"Trade item skip for {symbol}: {e}")
 
-            logger.info(f"[{symbol}] ✅ Trades: {sent} sent")
+                logger.info(f"[{symbol}] Trades: {sent} sent")
+                return
 
-        except Exception:
-            logger.exception("Trade fetch failed for %s", symbol)
-            return
+            except InvalidRequestError as e:
+                logger.error(f"Trades permanent error for {symbol}: {e}")
+                return
+            except Exception as e:
+                if attempt == MAX_RETRIES - 1:
+                    logger.warning(f"Trade fetch failed for {symbol} after {MAX_RETRIES} attempts: {e}")
+                    return
+                time.sleep(BASE_BACKOFF * (2 ** attempt))
 
     def _fetch_open_interest(self, symbol: str, interval: str, producer: KafkaProducer, start_ts: int, end_ts: int):
         """
@@ -2083,7 +2069,7 @@ class Librarian:
         gaps = await asyncio.to_thread(self._find_candle_gaps)
         self.scan_count += 1
         elapsed = time.monotonic() - t0
-        self.gaps_found = len(gaps)
+        _total_gaps = len(gaps)
 
         # Step 1: filter oversized gaps (> MAX_GAP_DAYS)
         within_limit = [
@@ -2114,36 +2100,58 @@ class Librarian:
             f"(budget: {self.PAGE_BUDGET - remaining_budget}/{self.PAGE_BUDGET} pages used)"
         )
 
-        sem = asyncio.Semaphore(self.REPAIR_SEM)
+        candle_sem = asyncio.Semaphore(self.REPAIR_SEM)
+        oi_sem     = asyncio.Semaphore(self.REPAIR_SEM)
+        lsr_sem    = asyncio.Semaphore(self.REPAIR_SEM)
 
         if scheduled:
-            tasks = [asyncio.create_task(self._repair_gap(sem, *g)) for g in scheduled]
+            tasks = [asyncio.create_task(self._repair_gap(candle_sem, *g)) for g in scheduled]
             results = await asyncio.gather(*tasks, return_exceptions=True)
             repaired = sum(1 for r in results if r is True)
             self.gaps_repaired += repaired
             logger.info(f"[Librarian] Repaired {repaired}/{len(scheduled)} gaps this cycle")
 
-        # OI gap scan and repair (shared page budget, deducted from remaining)
+        # OI gap scan and repair (budget-aware)
         try:
             oi_gaps = await asyncio.to_thread(self._find_oi_gaps)
             oi_within = [g for g in oi_gaps if (g[3] - g[2]) <= self.MAX_GAP_DAYS * 86_400_000]
-            if oi_within:
-                oi_tasks = [asyncio.create_task(self._repair_oi_gap(sem, *g)) for g in oi_within[:10]]
+            _total_gaps += len(oi_gaps)
+            oi_scheduled = []
+            oi_budget = 10  # max 10 API pages for OI repairs per cycle
+            for g in oi_within:
+                iv_ms = self._OI_INTERVAL_MS.get(g[1], 300_000)
+                pages = max(1, ceil((g[3] - g[2]) / iv_ms / 200))
+                if pages <= oi_budget:
+                    oi_scheduled.append(g)
+                    oi_budget -= pages
+            if oi_scheduled:
+                oi_tasks = [asyncio.create_task(self._repair_oi_gap(oi_sem, *g)) for g in oi_scheduled]
                 await asyncio.gather(*oi_tasks, return_exceptions=True)
-                logger.info(f"[Librarian] OI gaps: {len(oi_gaps)} found, {len(oi_within)} within limit")
+                logger.info(f"[Librarian] OI gaps: {len(oi_gaps)} found, {len(oi_scheduled)} repaired")
         except Exception as e:
             logger.error(f"[Librarian] OI scan error: {e}", exc_info=True)
 
-        # LSR gap scan and repair
+        # LSR gap scan and repair (budget-aware)
         try:
             lsr_gaps = await asyncio.to_thread(self._find_lsr_gaps)
             lsr_within = [g for g in lsr_gaps if (g[3] - g[2]) <= self.MAX_GAP_DAYS * 86_400_000]
-            if lsr_within:
-                lsr_tasks = [asyncio.create_task(self._repair_lsr_gap(sem, *g)) for g in lsr_within[:10]]
+            _total_gaps += len(lsr_gaps)
+            lsr_scheduled = []
+            lsr_budget = 10
+            for g in lsr_within:
+                iv_ms = self._OI_INTERVAL_MS.get(g[1], 300_000)
+                pages = max(1, ceil((g[3] - g[2]) / iv_ms / 500))
+                if pages <= lsr_budget:
+                    lsr_scheduled.append(g)
+                    lsr_budget -= pages
+            if lsr_scheduled:
+                lsr_tasks = [asyncio.create_task(self._repair_lsr_gap(lsr_sem, *g)) for g in lsr_scheduled]
                 await asyncio.gather(*lsr_tasks, return_exceptions=True)
-                logger.info(f"[Librarian] LSR gaps: {len(lsr_gaps)} found, {len(lsr_within)} within limit")
+                logger.info(f"[Librarian] LSR gaps: {len(lsr_gaps)} found, {len(lsr_scheduled)} repaired")
         except Exception as e:
             logger.error(f"[Librarian] LSR scan error: {e}", exc_info=True)
+
+        self.gaps_found = _total_gaps
 
     async def _repair_gap(
         self, sem: asyncio.Semaphore,
@@ -2194,8 +2202,7 @@ class Librarian:
         1x detects single-candle gaps. 2x was previously used to guard against DST
         false positives, which is not applicable here  -  all timestamps are UTC epoch ms.
 
-        No LIMIT in detection: the full gap list is returned so gaps_found in /health
-        reflects the true count. Repair is metered separately via PAGE_BUDGET.
+        Repair is metered separately via PAGE_BUDGET.
         """
         sql = (
             "SELECT symbol, interval, gap_start_ts, gap_end_ts "
@@ -2533,6 +2540,8 @@ class BybitWsFeed:
                         message_out   = {"topic": topic, "source": "ws",
                                          "timestamp": ts, "data": [payload_dict]}
 
+                        if len(self.raw_queue) >= KAFKA_QUEUE_MAXSIZE:
+                            ws_messages_dropped_total.inc()
                         self.raw_queue.append(message_out)
                         ws_messages_recv_total.inc()
                         self.metrics.inc("kafka_enqueued")
@@ -2559,9 +2568,21 @@ class BybitWsFeed:
                             data_item["interval"] = parts[1] if len(parts) > 2 else "1"
                             if not data_item.get("confirm", False):
                                 continue
+                            # Normalize Bybit kline short-key names to model field names
+                            if "start" in data_item and "timestamp" not in data_item:
+                                data_item["timestamp"] = data_item.pop("start")
+                        elif model_key == "publicTrade":
+                            # Normalize Bybit WS trade short keys to model field names
+                            data_item["trade_id"] = str(data_item.get("i", data_item.get("trade_id", "")))
+                            data_item["timestamp"] = int(data_item.get("T", data_item.get("timestamp", 0)))
+                            data_item["side"]      = data_item.get("S", data_item.get("side", ""))
+                            data_item["price"]     = float(data_item.get("p", data_item.get("price", 0)))
+                            data_item["size"]      = float(data_item.get("v", data_item.get("size", 0)))
                         validated  = PayloadModel(**data_item)
                         msg_out    = {"topic": topic, "source": "ws",
                                       "timestamp": ts, "data": [validated.model_dump()]}
+                        if len(self.raw_queue) >= KAFKA_QUEUE_MAXSIZE:
+                            ws_messages_dropped_total.inc()
                         self.raw_queue.append(msg_out)
                         ws_messages_recv_total.inc()
                         self.metrics.inc("kafka_enqueued")
@@ -2695,13 +2716,19 @@ class BybitWsManager(threading.Thread):
                 feed.start()            # blocks until pybit _connect() establishes socket
                 feed.subscribe(batch)
                 logger.info(
-                    f"[WsManager] Feed {id(feed)} ready → {len(batch)} symbols "
+                    f"[WsManager] Feed {id(feed)} ready - {len(batch)} symbols "
                     f"| Total feeds: {self.active_feed_count}"
                 )
             except Exception as e:
                 logger.error(f"[WsManager] Feed {id(feed)} failed to connect: {e}")
-                # Mark as closed so health_sweep removes it and re-queues symbols
                 feed._closed = True
+                # Re-queue every symbol from this batch so a new feed picks them up.
+                # feed.symbols is [] here because subscribe() never ran - we use batch.
+                for sym in batch:
+                    self._symbol_queue.put(sym)
+                logger.warning(
+                    f"[WsManager] Re-queued {len(batch)} symbols from failed feed {id(feed)}"
+                )
 
         t = threading.Thread(target=_connect_and_subscribe, daemon=True,
                              name=f"WsFeed-Connect-{id(feed)}")
@@ -2714,8 +2741,8 @@ class BybitWsManager(threading.Thread):
         pybit auto-reconnects internally, but if is_alive() returns False
         after the warmup window it means pybit gave up  -  we replace the feed.
         NOTE: _health_sweep does NOT fall back to REST fetching.
-              REST backfill is handled separately by the Librarian's _find_stale_tails
-              logic which detects missing live data and triggers a repair fetch.
+              WS data gaps are detected by the Librarian's candle/OI/LSR gap scanners
+              which run every 5 minutes and trigger targeted REST repair fetches.
         """
         dead: List[BybitWsFeed] = []
         with self._rlock:
@@ -2729,7 +2756,8 @@ class BybitWsManager(threading.Thread):
                 self._feeds.remove(feed)
 
         with self._rlock:
-            ws_active_gauge.set(len([f for f in self._feeds if f.is_alive()]))
+            feeds_snap = list(self._feeds)
+        ws_active_gauge.set(sum(1 for f in feeds_snap if f.is_alive()))
 
         for feed in dead:
             syms = feed.symbols
@@ -2764,7 +2792,7 @@ class RestJob:
     start_ts: int
     end_ts: int
 
-def start_rest_scheduler(rest_fetcher: "RestDataFetcher", loop: asyncio.AbstractEventLoop):
+def start_rest_scheduler(rest_fetcher: "RestDataFetcher", loop: asyncio.AbstractEventLoop, instrument_meta=None):
     """
     Starts a daemon thread that triggers periodic REST jobs aligned to wall-clock intervals.
     Uses asyncio.run_coroutine_threadsafe() to safely enqueue jobs into the asyncio.Queue
@@ -2827,15 +2855,22 @@ def start_rest_scheduler(rest_fetcher: "RestDataFetcher", loop: asyncio.Abstract
                             _enqueue(RestJob(job_type="open_interest", symbol=sym,
                                              interval=interval, start_ts=s, end_ts=now_ms))
 
-                # ---- Funding Rate (every 8 h) ----
-                key = "funding"
-                if now.minute == 0 and now.second < 30 and now.hour % 8 == 0 \
-                        and last_triggered.get(key) != now.hour:
-                    last_triggered[key] = now.hour
-                    s = now_ms - LOOKBACK_MS
+                # ---- Funding Rate (per-symbol interval: 4h or 8h) ----
+                if now.minute == 0 and now.second < 30:
                     for sym in symbols:
-                        _enqueue(RestJob(job_type="funding", symbol=sym,
-                                         interval=None, start_ts=s, end_ts=now_ms))
+                        funding_min = 480  # default 8h
+                        if instrument_meta is not None:
+                            try:
+                                funding_min = int(instrument_meta.get_funding_interval(sym, "480"))
+                            except Exception:
+                                pass
+                        funding_hours = max(1, funding_min // 60)
+                        key = f"funding_{sym}"
+                        if now.hour % funding_hours == 0 and last_triggered.get(key) != now.hour:
+                            last_triggered[key] = now.hour
+                            s = now_ms - LOOKBACK_MS
+                            _enqueue(RestJob(job_type="funding", symbol=sym,
+                                             interval=None, start_ts=s, end_ts=now_ms))
 
             except Exception as e:
                 logger.error(f"[Scheduler] Loop error: {e}", exc_info=True)
@@ -2970,8 +3005,6 @@ def _get_dead_letter_log() -> logging.Logger:
 
 
 # === Phase 1: Health Server (port 8001) ===
-from http.server import HTTPServer, BaseHTTPRequestHandler
-
 # Rolling rows/sec tracker  -  updated by _consumer_worker and read by health endpoint
 _health_start_time: float = time.time()
 _health_prev_records: int = 0
@@ -2990,6 +3023,34 @@ def _update_rows_per_sec(current_records: int) -> None:
             _health_rows_per_sec = round(delta / elapsed, 1) if elapsed > 0 else 0.0
             _health_prev_records = current_records
             _health_prev_ts = now
+
+def _get_ws_stats() -> dict:
+    """Snapshot current WebSocket manager state for health reporting."""
+    mgr = _ws_manager
+    if mgr is None:
+        return {"status": "not_started", "feeds_active": 0,
+                "symbols_subscribed": 0, "symbols_pending": 0,
+                "total_disconnects": 0}
+    with mgr._rlock:
+        feeds = list(mgr._feeds)
+    alive_feeds      = [f for f in feeds if f.is_alive()]
+    connecting_feeds = [f for f in feeds if not getattr(f, "_connected_at", None)]
+    symbols_live     = sum(len(f.symbols) for f in alive_feeds)
+    symbols_pending  = mgr._symbol_queue.qsize()
+    ws_ok = len(alive_feeds) > 0
+    return {
+        "status":             "active" if ws_ok else ("connecting" if connecting_feeds else "degraded"),
+        "feeds_active":       len(alive_feeds),
+        "feeds_connecting":   len(connecting_feeds),
+        "feeds_total":        len(feeds),
+        "symbols_subscribed": symbols_live,
+        "symbols_pending_reconnect": symbols_pending,
+        "total_disconnects":  metrics.ws_disconnects,
+        "ws_messages_recv":   metrics.ws_messages,
+        "ws_messages_dropped":metrics.dropped_messages,
+        "raw_queue_depth":    len(_ws_raw_queue),
+    }
+
 
 class _HealthHandler(BaseHTTPRequestHandler):
     """Minimal JSON health endpoint. Does NOT hold any app locks."""
@@ -3023,38 +3084,11 @@ class _HealthHandler(BaseHTTPRequestHandler):
             except Exception:
                 pass
 
-        # ── WS Manager stats helper (reads _ws_manager global) ──────────
-        def _ws_stats() -> dict:
-            mgr = _ws_manager
-            if mgr is None:
-                return {"status": "not_started", "feeds_active": 0,
-                        "symbols_subscribed": 0, "symbols_pending": 0,
-                        "total_disconnects": 0}
-            with mgr._rlock:
-                feeds = list(mgr._feeds)
-            alive_feeds      = [f for f in feeds if f.is_alive()]
-            connecting_feeds = [f for f in feeds if not getattr(f, "_connected_at", None)]
-            symbols_live     = sum(len(f.symbols) for f in alive_feeds)
-            symbols_pending  = mgr._symbol_queue.qsize()
-            ws_ok = len(alive_feeds) > 0
-            return {
-                "status":             "active" if ws_ok else ("connecting" if connecting_feeds else "degraded"),
-                "feeds_active":       len(alive_feeds),
-                "feeds_connecting":   len(connecting_feeds),
-                "feeds_total":        len(feeds),
-                "symbols_subscribed": symbols_live,
-                "symbols_pending_reconnect": symbols_pending,
-                "total_disconnects":  metrics.ws_disconnects,
-                "ws_messages_recv":   metrics.ws_messages,
-                "ws_messages_dropped":metrics.dropped_messages,
-                "raw_queue_depth":    len(_ws_raw_queue),
-            }
-
         payload = json.dumps({
             "status":           "ok",
             "uptime_seconds":   uptime_s,
             # ── Websocket ────────────────────────────────────────────────
-            "websocket":        _ws_stats(),
+            "websocket":        _get_ws_stats(),
 
             # ── Kafka ────────────────────────────────────────────────────
             "kafka_enqueued":   metrics.kafka_enqueued,
@@ -3126,11 +3160,12 @@ class _HealthSnapshotLogger:
         fname = f"health_snapshots_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jsonl"
         self._path = os.path.join(log_dir, fname)
         self._stop  = threading.Event()
+        self._fh = open(self._path, "a", encoding="utf-8")
         self._thread = threading.Thread(
             target=self._run, daemon=True, name="Health-Snapshot-Logger"
         )
         logger.info(
-            f"✅ Health snapshot logger: writing to {self._path} "
+            f"Health snapshot logger: writing to {self._path} "
             f"every {interval_s:.0f}s"
         )
 
@@ -3139,6 +3174,10 @@ class _HealthSnapshotLogger:
 
     def stop(self) -> None:
         self._stop.set()
+        try:
+            self._fh.close()
+        except Exception:
+            pass
 
     def _build_payload(self) -> dict:
         """Reconstruct the same payload as _HealthHandler.do_GET()  -  no HTTP round-trip."""
@@ -3164,37 +3203,11 @@ class _HealthSnapshotLogger:
             except Exception:
                 pass
 
-        def _ws_stats() -> dict:
-            mgr = _ws_manager
-            if mgr is None:
-                return {"status": "not_started", "feeds_active": 0,
-                        "symbols_subscribed": 0, "symbols_pending": 0,
-                        "total_disconnects": 0}
-            with mgr._rlock:
-                feeds = list(mgr._feeds)
-            alive_feeds      = [f for f in feeds if f.is_alive()]
-            connecting_feeds = [f for f in feeds if not getattr(f, "_connected_at", None)]
-            symbols_live     = sum(len(f.symbols) for f in alive_feeds)
-            symbols_pending  = mgr._symbol_queue.qsize()
-            ws_ok = len(alive_feeds) > 0
-            return {
-                "status":             "active" if ws_ok else ("connecting" if connecting_feeds else "degraded"),
-                "feeds_active":       len(alive_feeds),
-                "feeds_connecting":   len(connecting_feeds),
-                "feeds_total":        len(feeds),
-                "symbols_subscribed": symbols_live,
-                "symbols_pending_reconnect": symbols_pending,
-                "total_disconnects":  metrics.ws_disconnects,
-                "ws_messages_recv":   metrics.ws_messages,
-                "ws_messages_dropped":metrics.dropped_messages,
-                "raw_queue_depth":    len(_ws_raw_queue),
-            }
-
         return {
             "snapshot_ts":      datetime.now(timezone.utc).isoformat(),
             "status":           "ok",
             "uptime_seconds":   int(now_t - _health_start_time),
-            "websocket":        _ws_stats(),
+            "websocket":        _get_ws_stats(),
 
             "kafka_enqueued":   metrics.kafka_enqueued,
             "kafka_sent":       metrics.kafka_sent,
@@ -3224,8 +3237,8 @@ class _HealthSnapshotLogger:
             try:
                 payload = self._build_payload()
                 line    = json.dumps(payload, separators=(',', ':')) + "\n"
-                with open(self._path, "a", encoding="utf-8") as fh:
-                    fh.write(line)
+                self._fh.write(line)
+                self._fh.flush()
             except Exception as e:
                 logger.warning(f"[HealthSnapshot] Write failed: {e}")
             self._stop.wait(timeout=self.interval_s)
@@ -3257,7 +3270,9 @@ async def drain_to_kafka(producer: KafkaProducer, stop_event: asyncio.Event):
     Runs exclusively in the event loop  -  WS threads only append(); this task only popleft().
     Batch size and poll interval are tuned for <1ms latency under burst traffic.
     """
-    POLL_INTERVAL = 0.001   # 1 ms idle poll
+    POLL_INTERVAL = 0.010   # 10ms idle poll - reduces CPU scheduling overhead 10x vs 1ms.
+    # Full fix requires replacing deque with asyncio.Queue + await queue.get(), which needs
+    # loop.call_soon_threadsafe in the WS callback. That refactor is tracked separately.
     BATCH_MAX     = 500     # max messages drained per iteration
 
     logger.info("drain_to_kafka task started")
@@ -3319,8 +3334,8 @@ async def main():
 
     start_http_server(9100)           # Prometheus metrics (moved from 8000, FastAPI uses 8000)
     start_health_server(8001)         # JSON health endpoint
-    start_health_snapshot_logger(     # periodic health snapshots → logs/health_snapshots_*.jsonl
-        interval_s=30.0,              #   rule of thumb: 30s while DB < 100M rows; raise to 60-120s beyond that
+    _snap_logger = start_health_snapshot_logger(
+        interval_s=30.0,
         log_dir="stat_logs",
     )
     stop_event = asyncio.Event()
@@ -3420,35 +3435,36 @@ async def main():
     # Capture the running event loop so the scheduler thread can enqueue jobs safely.
     loop = asyncio.get_running_loop()
 
-    # === STAGE 4: START REAL-TIME COLLECTION (before backfill so live data flows immediately) ===
-    # Tables are created with WAL DEDUP, so concurrent live WS writes and backfill REST writes
-    # are safe - QuestDB deduplicates by UPSERT KEYS, no ordering requirement.
-    logger.info("Starting WebSocket manager and drain task...")
-    ws_manager.add_symbols(symbols)
-    ws_manager.start()
-    _ws_manager = ws_manager
-    drain_task = asyncio.create_task(drain_to_kafka(producer, stop_event), name="WS-Drain")
-
-    # REST scheduler for periodic OI/LSR/funding refreshes
-    rest_scheduler_thread = start_rest_scheduler(rest_fetcher, loop)
-
-    # === STAGE 5: RUN HISTORICAL BACKFILL (concurrent with live WS collection) ===
-    logger.info("Starting historical data backfill (runs concurrently with live WS)...")
+    # === STAGE 4: RUN HISTORICAL BACKFILL FIRST ===
+    # WS starts only after backfill completes. Reason: at v2 scale (550 symbols x 5 exchanges),
+    # concurrent REST backfill + live WS floods Kafka consumers with two independent high-volume
+    # streams simultaneously. REST backfill alone can push 96k rows/sec; WS at full scale adds
+    # another 16k msgs/sec. Running them sequentially keeps each phase within safe throughput
+    # limits and makes the startup sequence deterministic and debuggable.
+    logger.info("Starting historical data backfill...")
     await rest_fetcher.enqueue_historical(symbols)
     await rest_fetcher.queue.join()
     await asyncio.sleep(0.5)
-    logger.info("✅ Historical backfill complete.")
+    logger.info("Historical backfill complete.")
 
     # Apply DEDUP UPSERT KEYS after backfill to ensure all tables exist.
     # Idempotent - safe on every restart; QuestDB ignores if already enabled.
     await asyncio.to_thread(ensure_table_dedup)
 
-    # === STAGE 6: START LIBRARIAN (after backfill - 90s internal cooldown before first scan) ===
+    # === STAGE 5: START REAL-TIME COLLECTION ===
+    logger.info("Launching WebSocket manager and schedulers...")
+    ws_manager.add_symbols(symbols)
+    ws_manager.start()
+    _ws_manager = ws_manager
+    drain_task = asyncio.create_task(drain_to_kafka(producer, stop_event), name="WS-Drain")
+    rest_scheduler_thread = start_rest_scheduler(rest_fetcher, loop, instrument_meta_manager)
+
+    # === STAGE 6: START LIBRARIAN (90s internal cooldown before first scan) ===
     _librarian = Librarian(rest_fetcher, producer)
     librarian_task = asyncio.create_task(_librarian.run(stop_event), name="Librarian")
     logger.info("[Librarian] Task created - first scan in 90s")
 
-    # === STAGE 6: GRACEFUL SHUTDOWN & MONITORING LOOP ===
+    # === STAGE 7: GRACEFUL SHUTDOWN & MONITORING LOOP ===
     def shutdown_handler(signum, frame):
         logger.info("Shutdown signal received. Initiating graceful shutdown...")
         loop.call_soon_threadsafe(stop_event.set)
@@ -3536,6 +3552,13 @@ async def main():
         # Each _consumer_worker closes its own ILP socket on exit.
         # OptimizedDatabaseManager has no shared socket to close here.
         logger.info("DB manager cleanup complete (per-worker sockets closed on task exit).")
+
+        # Flush and close the health snapshot file handle cleanly.
+        try:
+            _snap_logger.stop()
+        except Exception:
+            pass
+
         logger.info("Shutdown complete. Exiting.")
 
 if __name__ == "__main__":
